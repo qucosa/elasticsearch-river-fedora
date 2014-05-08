@@ -1,6 +1,10 @@
-package org.elasticsearch.river;
+package de.slub.elasticsearch.river.fedora;
 
 import org.elasticsearch.common.inject.Inject;
+import org.elasticsearch.river.AbstractRiverComponent;
+import org.elasticsearch.river.River;
+import org.elasticsearch.river.RiverName;
+import org.elasticsearch.river.RiverSettings;
 
 public class FedoraRiver extends AbstractRiverComponent implements River {
 

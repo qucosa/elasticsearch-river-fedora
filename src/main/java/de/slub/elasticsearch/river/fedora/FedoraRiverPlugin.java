@@ -1,8 +1,7 @@
-package org.elasticsearch.plugin.river.fedora;
+package de.slub.elasticsearch.river.fedora;
 
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.plugins.AbstractPlugin;
-import org.elasticsearch.river.FedoraRiverModule;
 import org.elasticsearch.river.RiversModule;
 
 public class FedoraRiverPlugin extends AbstractPlugin {

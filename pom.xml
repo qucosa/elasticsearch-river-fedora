@@ -7,6 +7,7 @@
     <groupId>de.slub</groupId>
     <artifactId>elasticsearch-fedora-river</artifactId>
     <version>1.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
 
     <name>Elasticsearch Fedora River plugin</name>
     <description>
@@ -27,7 +28,6 @@
         <lucene.version>4.7.2</lucene.version>
     </properties>
 
-    <packaging>jar</packaging>
 
     <build>
         <pluginManagement>
