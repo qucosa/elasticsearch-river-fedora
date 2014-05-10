@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright 2014 SLUB Dresden
+  ~
+  ~    Licensed under the Apache License, Version 2.0 (the "License");
+  ~    you may not use this file except in compliance with the License.
+  ~    You may obtain a copy of the License at
+  ~
+  ~        http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~    Unless required by applicable law or agreed to in writing, software
+  ~    distributed under the License is distributed on an "AS IS" BASIS,
+  ~    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~    See the License for the specific language governing permissions and
+  ~    limitations under the License.
+  -->
+
+<entry xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:fedora-types="http://www.fedora.info/definitions/1/0/types/"
+       xmlns="http://www.w3.org/2005/Atom">
+    <id>urn:uuid:e48c7bc6-0c92-436e-9909-54ea93e8b1c4</id>
+    <updated>2012-08-30T09:19:42.940Z</updated>
+    <author>
+        <name>fedoraAdmin</name>
+        <uri>http://localhost:8080/fedora</uri>
+    </author>
+    <title type="text">purgeDatastream</title>
+    <category term="test-rest:1" scheme="fedora-types:pid" label="xsd:string"></category>
+    <category term="testPurgeDatastream" scheme="fedora-types:dsID" label="xsd:string"></category>
+    <category term="2012-08-30T09:19:42.419Z" scheme="fedora-types:startDT"
+              label="xsd:string"></category>
+    <category term="2012-08-30T09:19:42.419Z" scheme="fedora-types:endDT"
+              label="xsd:string"></category>
+    <category term="purge only 1" scheme="fedora-types:logMessage" label="xsd:string"></category>
+    <summary type="text">test-rest:1</summary>
+    <content type="text">[OMITTED]</content>
+    <category term="3.6.1-SNAPSHOT" scheme="info:fedora/fedora-system:def/view#version"></category>
+    <category term="info:fedora/fedora-system:ATOM-APIM-1.0"
+              scheme="http://www.fedora.info/definitions/1/0/types/formatURI"></category>
+</entry>

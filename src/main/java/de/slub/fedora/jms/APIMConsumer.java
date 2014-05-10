@@ -16,6 +16,7 @@
 
 package de.slub.fedora.jms;
 
+import de.slub.index.IndexJob;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.elasticsearch.common.logging.ESLogger;
 
@@ -23,22 +24,26 @@ import javax.jms.*;
 import java.net.URI;
 import java.util.concurrent.TimeUnit;
 
+import static de.slub.fedora.jms.MessageMapper.map;
+
 public class APIMConsumer implements Runnable {
 
     private final URI uri;
     private final ESLogger log;
     private final String messageSelector;
     private final String topicFilter;
+    private final java.util.Queue<IndexJob> indexJobQueue;
     private Connection connection;
     private Session session;
     private MessageConsumer consumer;
     private boolean terminated = false;
 
-    public APIMConsumer(URI broker, String messageSelector, String topicFilter, ESLogger logger) {
+    public APIMConsumer(URI broker, String messageSelector, String topicFilter, java.util.Queue<IndexJob> indexJobQueue, ESLogger logger) {
         this.uri = broker;
         this.log = logger;
         this.messageSelector = messageSelector;
         this.topicFilter = (topicFilter != null && !topicFilter.isEmpty()) ? topicFilter : "fedora.apim.*";
+        this.indexJobQueue = indexJobQueue;
     }
 
     @Override
@@ -57,11 +62,27 @@ public class APIMConsumer implements Runnable {
         terminated = true;
     }
 
-    private void receiveLoop() throws InterruptedException, JMSException {
+    private void receiveLoop() {
         while (!terminated) {
-            Message msg = consumer.receive(TimeUnit.SECONDS.toMillis(1));
+            Message msg = null;
+            try {
+                msg = consumer.receive(TimeUnit.SECONDS.toMillis(1));
+            } catch (JMSException e) {
+                log.error("Failed receiving message: " + e.getMessage());
+            }
             if ((msg != null) && (msg instanceof TextMessage)) {
-                log.info("received: " + ((TextMessage) msg).getText());
+                try {
+                    log.debug("received:\n" + ((TextMessage) msg).getText());
+                    IndexJob idxJob = map(msg);
+                    if (idxJob != null) {
+                        indexJobQueue.add(idxJob);
+                        log.debug("Index job created: " + idxJob);
+                    } else {
+                        log.debug("No index job created (no mapping applies)");
+                    }
+                } catch (Exception e) {
+                    log.error("Failed creating index job: " + e.getCause().getMessage());
+                }
             }
         }
     }
@@ -73,7 +94,7 @@ public class APIMConsumer implements Runnable {
         connection = connectionFactory.createConnection();
         connection.start();
         session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
-        Destination destination = session.createTopic("fedora.apim.*");
+        Destination destination = session.createTopic(topicFilter);
 
         if (messageSelector == null || messageSelector.isEmpty()) {
             consumer = session.createConsumer(destination);

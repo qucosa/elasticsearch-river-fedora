@@ -17,6 +17,8 @@
 package de.slub.elasticsearch.river.fedora;
 
 import de.slub.fedora.jms.APIMConsumer;
+import de.slub.index.IndexJob;
+import de.slub.util.concurrent.UniqueDelayQueue;
 import org.apache.activemq.ConfigurationException;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.util.concurrent.EsExecutors;
@@ -34,6 +36,7 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
 
     private final APIMConsumer apimConsumer;
     private final Thread apimConsumerThread;
+    private final UniqueDelayQueue<IndexJob> indexJobQueue;
 
     @Inject
     protected FedoraRiver(RiverName riverName, RiverSettings settings) throws URISyntaxException, ConfigurationException {
@@ -52,15 +55,18 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
         }
 
         if (brokerUrl == null || brokerUrl.isEmpty()) {
-            throw new ConfigurationException("No broker URL has been configured.\n" +
+            throw new ConfigurationException("No broker URL has been configured. " +
                     "Please specify jms.brokerUrl in the Fedora River metadata."
             );
         }
+
+        indexJobQueue = new UniqueDelayQueue<IndexJob>();
 
         apimConsumer = new APIMConsumer(
                 new URI(brokerUrl),
                 messageSelector,
                 topicFilter,
+                indexJobQueue,
                 logger
         );
 
