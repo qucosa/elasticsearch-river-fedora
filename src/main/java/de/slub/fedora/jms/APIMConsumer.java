@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package de.slub.elasticsearch.river.fedora.de.slub.jms.fedora;
+package de.slub.fedora.jms;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.elasticsearch.common.logging.ESLogger;

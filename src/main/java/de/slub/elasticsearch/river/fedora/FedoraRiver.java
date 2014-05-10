@@ -16,7 +16,8 @@
 
 package de.slub.elasticsearch.river.fedora;
 
-import de.slub.elasticsearch.river.fedora.de.slub.jms.fedora.APIMConsumer;
+import de.slub.fedora.jms.APIMConsumer;
+import org.apache.activemq.ConfigurationException;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.util.concurrent.EsExecutors;
 import org.elasticsearch.common.xcontent.support.XContentMapValues;
@@ -27,6 +28,7 @@ import org.elasticsearch.river.RiverSettings;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Map;
 
 public class FedoraRiver extends AbstractRiverComponent implements River {
 
@@ -34,14 +36,26 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
     private final Thread apimConsumerThread;
 
     @Inject
-    protected FedoraRiver(RiverName riverName, RiverSettings settings) throws URISyntaxException {
+    protected FedoraRiver(RiverName riverName, RiverSettings settings) throws URISyntaxException, ConfigurationException {
         super(riverName, settings);
 
-        String brokerUrl = XContentMapValues.nodeStringValue(
-                settings.settings().get("brokerUrl"), "tcp://localhost:61616"
-        );
-        String messageSelector = (String) settings.settings().get("messageSelector");
-        String topicFilter = (String) settings.settings().get("topicFilter");
+        String brokerUrl = null;
+        String messageSelector = null;
+        String topicFilter = null;
+
+        if (settings.settings().containsKey("jms")) {
+            Map<String, Object> jmsSettings =
+                    XContentMapValues.nodeMapValue(settings.settings().get("jms"), "jms");
+            brokerUrl = (String) jmsSettings.get("brokerUrl");
+            messageSelector = (String) jmsSettings.get("messageSelector");
+            topicFilter = (String) jmsSettings.get("topicFilter");
+        }
+
+        if (brokerUrl == null || brokerUrl.isEmpty()) {
+            throw new ConfigurationException("No broker URL has been configured.\n" +
+                    "Please specify jms.brokerUrl in the Fedora River metadata."
+            );
+        }
 
         apimConsumer = new APIMConsumer(
                 new URI(brokerUrl),
@@ -49,6 +63,7 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
                 topicFilter,
                 logger
         );
+
         apimConsumerThread = EsExecutors.daemonThreadFactory(
                 settings.globalSettings(),
                 "fedora-river-apimConsumer").newThread(apimConsumer);
