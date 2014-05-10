@@ -16,27 +16,55 @@
 
 package de.slub.elasticsearch.river.fedora;
 
+import de.slub.elasticsearch.river.fedora.de.slub.jms.fedora.APIMConsumer;
 import org.elasticsearch.common.inject.Inject;
+import org.elasticsearch.common.util.concurrent.EsExecutors;
+import org.elasticsearch.common.xcontent.support.XContentMapValues;
 import org.elasticsearch.river.AbstractRiverComponent;
 import org.elasticsearch.river.River;
 import org.elasticsearch.river.RiverName;
 import org.elasticsearch.river.RiverSettings;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+
 public class FedoraRiver extends AbstractRiverComponent implements River {
 
+    private final APIMConsumer apimConsumer;
+    private final Thread apimConsumerThread;
+
     @Inject
-    protected FedoraRiver(RiverName riverName, RiverSettings settings) {
+    protected FedoraRiver(RiverName riverName, RiverSettings settings) throws URISyntaxException {
         super(riverName, settings);
-        logger.info("create");
+
+        String brokerUrl = XContentMapValues.nodeStringValue(
+                settings.settings().get("brokerUrl"), "tcp://localhost:61616"
+        );
+        String messageSelector = (String) settings.settings().get("messageSelector");
+        String topicFilter = (String) settings.settings().get("topicFilter");
+
+        apimConsumer = new APIMConsumer(
+                new URI(brokerUrl),
+                messageSelector,
+                topicFilter,
+                logger
+        );
+        apimConsumerThread = EsExecutors.daemonThreadFactory(
+                settings.globalSettings(),
+                "fedora-river-apimConsumer").newThread(apimConsumer);
+
+        logger.info("created");
     }
 
     @Override
     public void start() {
-        logger.info("start");
+        apimConsumerThread.start();
+        logger.info("started");
     }
 
     @Override
     public void close() {
-        logger.info("close");
+        apimConsumer.terminate();
+        logger.info("closed");
     }
 }
