@@ -53,7 +53,7 @@ public class MessageMapper {
         switch (methodName) {
             case "ingest":
             case "addDatastream":
-                indexJob = new IndexJob(IndexJob.Type.CREATE, pid, dsid);
+                indexJob = new IndexJob(IndexJob.Type.CREATE, pid, dsid, 1, TimeUnit.SECONDS);
                 break;
             case "purgeObject":
             case "purgeDatastream":
@@ -63,7 +63,7 @@ public class MessageMapper {
             case "modifyDatastreamByReference":
             case "modifyDatastreamByValue":
             case "setDatastreamState":
-                indexJob = new IndexJob(IndexJob.Type.UPDATE, pid, dsid, 10, TimeUnit.SECONDS);
+                indexJob = new IndexJob(IndexJob.Type.UPDATE, pid, dsid, 5, TimeUnit.SECONDS);
                 break;
         }
         return indexJob;

@@ -18,8 +18,10 @@ package de.slub.elasticsearch.river.fedora;
 
 import de.slub.fedora.jms.APIMConsumer;
 import de.slub.index.IndexJob;
+import de.slub.index.IndexJobProcessor;
 import de.slub.util.concurrent.UniqueDelayQueue;
 import org.apache.activemq.ConfigurationException;
+import org.elasticsearch.client.Client;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.util.concurrent.EsExecutors;
 import org.elasticsearch.common.xcontent.support.XContentMapValues;
@@ -35,11 +37,12 @@ import java.util.Map;
 public class FedoraRiver extends AbstractRiverComponent implements River {
 
     private final APIMConsumer apimConsumer;
+    private final IndexJobProcessor indexJobProcessor;
     private final Thread apimConsumerThread;
-    private final UniqueDelayQueue<IndexJob> indexJobQueue;
+    private final Thread indexJobProcessorThread;
 
     @Inject
-    protected FedoraRiver(RiverName riverName, RiverSettings settings) throws URISyntaxException, ConfigurationException {
+    protected FedoraRiver(RiverName riverName, RiverSettings settings, Client client) throws URISyntaxException, ConfigurationException {
         super(riverName, settings);
 
         String brokerUrl = null;
@@ -60,7 +63,7 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
             );
         }
 
-        indexJobQueue = new UniqueDelayQueue<IndexJob>();
+        UniqueDelayQueue<IndexJob> indexJobQueue = new UniqueDelayQueue<IndexJob>();
 
         apimConsumer = new APIMConsumer(
                 new URI(brokerUrl),
@@ -74,18 +77,30 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
                 settings.globalSettings(),
                 "fedora-river-apimConsumer").newThread(apimConsumer);
 
+        indexJobProcessor = new IndexJobProcessor(
+                indexJobQueue,
+                client,
+                logger
+        );
+
+        indexJobProcessorThread = EsExecutors.daemonThreadFactory(
+                settings.globalSettings(),
+                "fedora-river-indexJobProcessor").newThread(indexJobProcessor);
+
         logger.info("created");
     }
 
     @Override
     public void start() {
         apimConsumerThread.start();
+        indexJobProcessorThread.start();
         logger.info("started");
     }
 
     @Override
     public void close() {
         apimConsumer.terminate();
+        indexJobProcessor.terminate();
         logger.info("closed");
     }
 }
