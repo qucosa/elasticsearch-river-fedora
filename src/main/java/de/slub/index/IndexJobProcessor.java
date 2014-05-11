@@ -16,6 +16,7 @@
 
 package de.slub.index;
 
+import com.yourmediashelf.fedora.client.FedoraClient;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.logging.ESLogger;
 
@@ -29,7 +30,7 @@ public class IndexJobProcessor implements Runnable {
     private final ESLogger log;
     private boolean terminated = false;
 
-    public IndexJobProcessor(BlockingQueue<IndexJob> indexJobQueue, Client esClient, ESLogger logger) {
+    public IndexJobProcessor(BlockingQueue<IndexJob> indexJobQueue, Client esClient, FedoraClient fedoraClient, ESLogger logger) {
         this.client = esClient;
         this.queue = indexJobQueue;
         this.log = logger;

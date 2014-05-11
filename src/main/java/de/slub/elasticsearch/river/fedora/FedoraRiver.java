@@ -16,6 +16,11 @@
 
 package de.slub.elasticsearch.river.fedora;
 
+import com.yourmediashelf.fedora.client.FedoraClient;
+import com.yourmediashelf.fedora.client.FedoraCredentials;
+import com.yourmediashelf.fedora.client.request.DescribeRepository;
+import com.yourmediashelf.fedora.client.response.DescribeRepositoryResponse;
+import com.yourmediashelf.fedora.generated.access.FedoraRepository;
 import de.slub.fedora.jms.APIMConsumer;
 import de.slub.index.IndexJob;
 import de.slub.index.IndexJobProcessor;
@@ -36,19 +41,53 @@ import java.util.Map;
 
 public class FedoraRiver extends AbstractRiverComponent implements River {
 
-    private final APIMConsumer apimConsumer;
-    private final IndexJobProcessor indexJobProcessor;
-    private final Thread apimConsumerThread;
-    private final Thread indexJobProcessorThread;
+    private APIMConsumer apimConsumer;
+    private IndexJobProcessor indexJobProcessor;
+    private FedoraClient fedoraClient;
+    private Thread apimConsumerThread;
+    private Thread indexJobProcessorThread;
+    private String brokerUrl;
+    private String messageSelector;
+    private String topicFilter;
+    private String fedoraUrl;
+    private String username;
+    private String password;
 
     @Inject
-    protected FedoraRiver(RiverName riverName, RiverSettings settings, Client client) throws URISyntaxException, ConfigurationException {
+    protected FedoraRiver(RiverName riverName, RiverSettings settings, Client client) throws Exception {
         super(riverName, settings);
 
-        String brokerUrl = null;
-        String messageSelector = null;
-        String topicFilter = null;
+        configure(settings);
 
+        UniqueDelayQueue<IndexJob> indexJobQueue = new UniqueDelayQueue<>();
+
+        setupApimConsumerThread(settings, indexJobQueue);
+        setupFedoraClient();
+        setupIndexJobProcessorThread(settings, client, indexJobQueue);
+
+        logger.info("created");
+    }
+
+    private void setupFedoraClient() throws Exception {
+        try {
+            fedoraClient = new FedoraClient(
+                    new FedoraCredentials(fedoraUrl, username, password));
+            DescribeRepositoryResponse describeResponse =
+                    (DescribeRepositoryResponse) fedoraClient.execute(new DescribeRepository());
+
+            FedoraRepository repoInfo = describeResponse.getRepositoryInfo();
+            logger.info("Connected to [{}], version [{}] at [{}] as [{}]",
+                    repoInfo.getRepositoryName(),
+                    repoInfo.getRepositoryVersion(),
+                    repoInfo.getRepositoryBaseURL(),
+                    username);
+        } catch (Exception ex) {
+            logger.error("Error initializing Fedora connection: " + ex.getCause().getMessage());
+            throw ex;
+        }
+    }
+
+    private void configure(RiverSettings settings) throws ConfigurationException {
         if (settings.settings().containsKey("jms")) {
             Map<String, Object> jmsSettings =
                     XContentMapValues.nodeMapValue(settings.settings().get("jms"), "jms");
@@ -63,8 +102,31 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
             );
         }
 
-        UniqueDelayQueue<IndexJob> indexJobQueue = new UniqueDelayQueue<IndexJob>();
+        if (settings.settings().containsKey("fedora")) {
+            Map<String, Object> fedoraSettings =
+                    XContentMapValues.nodeMapValue(settings.settings().get("fedora"), "fedora");
+            fedoraUrl = (String) fedoraSettings.get("url");
+            username = (String) fedoraSettings.get("username");
+            password = (String) fedoraSettings.get("password");
+        } else {
+            throw new ConfigurationException("No Fedora repository has been configured. " +
+                    "Please specify fedora.* options in the Fedora River metadata.");
+        }
+    }
 
+    private void setupIndexJobProcessorThread(RiverSettings settings, Client client, UniqueDelayQueue<IndexJob> indexJobQueue) {
+        indexJobProcessor = new IndexJobProcessor(
+                indexJobQueue,
+                client,
+                fedoraClient,
+                logger
+        );
+        indexJobProcessorThread = EsExecutors.daemonThreadFactory(
+                settings.globalSettings(),
+                "fedora-river-indexJobProcessor").newThread(indexJobProcessor);
+    }
+
+    private void setupApimConsumerThread(RiverSettings settings, UniqueDelayQueue<IndexJob> indexJobQueue) throws URISyntaxException {
         apimConsumer = new APIMConsumer(
                 new URI(brokerUrl),
                 messageSelector,
@@ -72,22 +134,9 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
                 indexJobQueue,
                 logger
         );
-
         apimConsumerThread = EsExecutors.daemonThreadFactory(
                 settings.globalSettings(),
                 "fedora-river-apimConsumer").newThread(apimConsumer);
-
-        indexJobProcessor = new IndexJobProcessor(
-                indexJobQueue,
-                client,
-                logger
-        );
-
-        indexJobProcessorThread = EsExecutors.daemonThreadFactory(
-                settings.globalSettings(),
-                "fedora-river-indexJobProcessor").newThread(indexJobProcessor);
-
-        logger.info("created");
     }
 
     @Override

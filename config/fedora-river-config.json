@@ -22,5 +22,10 @@
                 OR methodName LIKE 'add%' \
                 OR methodName LIKE 'purge%' OR methodName = 'ingest'",
         "topicFilter": "fedora.apim.update"
+    },
+    "fedora": {
+        "url": "http://localhost:8080/fedora",
+        "username": "fedoraAdmin",
+        "password": "fedoraAdmin"
     }
 }
