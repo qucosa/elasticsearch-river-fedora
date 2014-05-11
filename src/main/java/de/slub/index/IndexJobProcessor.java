@@ -54,6 +54,11 @@ public class IndexJobProcessor implements Runnable {
     }
 
     private void perform(IndexJob job) {
-        log.info("Performing: " + job);
+        log.debug("Performing: " + job);
+        try {
+            job.execute(client, log);
+        } catch (Exception ex) {
+            log.error("Error: " + ex.getMessage() + " Reason: " + ex.getCause().getMessage());
+        }
     }
 }

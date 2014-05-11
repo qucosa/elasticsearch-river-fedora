@@ -16,7 +16,9 @@
 
 package de.slub.fedora.jms;
 
+import de.slub.index.DatastreamIndexJob;
 import de.slub.index.IndexJob;
+import de.slub.index.ObjectIndexJob;
 import org.apache.commons.io.IOUtils;
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
@@ -52,18 +54,24 @@ public class MessageMapper {
         String methodName = message.getStringProperty("methodName");
         switch (methodName) {
             case "ingest":
+                indexJob = new ObjectIndexJob(IndexJob.Type.CREATE, pid, 1, TimeUnit.SECONDS);
+                break;
             case "addDatastream":
-                indexJob = new IndexJob(IndexJob.Type.CREATE, pid, dsid, 1, TimeUnit.SECONDS);
+                indexJob = new DatastreamIndexJob(IndexJob.Type.CREATE, pid, dsid, 1, TimeUnit.SECONDS);
                 break;
             case "purgeObject":
+                indexJob = new ObjectIndexJob(IndexJob.Type.DELETE, pid);
+                break;
             case "purgeDatastream":
-                indexJob = new IndexJob(IndexJob.Type.DELETE, pid, dsid);
+                indexJob = new DatastreamIndexJob(IndexJob.Type.DELETE, pid, dsid);
                 break;
             case "modifyObject":
+                indexJob = new ObjectIndexJob(IndexJob.Type.UPDATE, pid, 5, TimeUnit.SECONDS);
+                break;
             case "modifyDatastreamByReference":
             case "modifyDatastreamByValue":
             case "setDatastreamState":
-                indexJob = new IndexJob(IndexJob.Type.UPDATE, pid, dsid, 5, TimeUnit.SECONDS);
+                indexJob = new DatastreamIndexJob(IndexJob.Type.UPDATE, pid, dsid, 5, TimeUnit.SECONDS);
                 break;
         }
         return indexJob;

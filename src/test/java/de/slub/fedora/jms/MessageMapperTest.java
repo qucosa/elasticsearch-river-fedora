@@ -16,7 +16,9 @@
 
 package de.slub.fedora.jms;
 
+import de.slub.index.DatastreamIndexJob;
 import de.slub.index.IndexJob;
+import de.slub.index.ObjectIndexJob;
 import org.apache.commons.io.IOUtils;
 import org.junit.Test;
 
@@ -51,7 +53,7 @@ public class MessageMapperTest {
         IndexJob ij = MessageMapper.map(message);
 
         assertEquals(
-                new IndexJob(IndexJob.Type.CREATE, "test-rest:1", ""),
+                new ObjectIndexJob(IndexJob.Type.CREATE, "test-rest:1"),
                 ij);
     }
 
@@ -65,7 +67,7 @@ public class MessageMapperTest {
         IndexJob ij = MessageMapper.map(message);
 
         assertEquals(
-                new IndexJob(IndexJob.Type.CREATE, "test-rest:1", "testAddDatastream"),
+                new DatastreamIndexJob(IndexJob.Type.CREATE, "test-rest:1", "testAddDatastream"),
                 ij);
     }
 
@@ -79,7 +81,7 @@ public class MessageMapperTest {
         IndexJob ij = MessageMapper.map(message);
 
         assertEquals(
-                new IndexJob(IndexJob.Type.UPDATE, "test-rest:1", "testModifyDatastream"),
+                new DatastreamIndexJob(IndexJob.Type.UPDATE, "test-rest:1", "testModifyDatastream"),
                 ij);
     }
 
@@ -93,7 +95,7 @@ public class MessageMapperTest {
         IndexJob ij = MessageMapper.map(message);
 
         assertEquals(
-                new IndexJob(IndexJob.Type.UPDATE, "test-rest:1", ""),
+                new ObjectIndexJob(IndexJob.Type.UPDATE, "test-rest:1"),
                 ij);
     }
 
@@ -107,7 +109,7 @@ public class MessageMapperTest {
         IndexJob ij = MessageMapper.map(message);
 
         assertEquals(
-                new IndexJob(IndexJob.Type.DELETE, "test-rest:1", "testPurgeDatastream"),
+                new DatastreamIndexJob(IndexJob.Type.DELETE, "test-rest:1", "testPurgeDatastream"),
                 ij);
     }
 
@@ -121,7 +123,7 @@ public class MessageMapperTest {
         IndexJob ij = MessageMapper.map(message);
 
         assertEquals(
-                new IndexJob(IndexJob.Type.DELETE, "test-rest:1", ""),
+                new ObjectIndexJob(IndexJob.Type.DELETE, "test-rest:1"),
                 ij);
     }
 

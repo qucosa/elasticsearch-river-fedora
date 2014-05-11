@@ -17,15 +17,25 @@
 package de.slub.index;
 
 import de.slub.util.concurrent.DelayedQueueElement;
+import org.elasticsearch.client.Client;
+import org.elasticsearch.common.logging.ESLogger;
 
 import java.util.concurrent.TimeUnit;
 
-public class IndexJob extends DelayedQueueElement {
+public abstract class IndexJob extends DelayedQueueElement {
 
     private final Type type;
     private final String pid;
     private final String dsid;
     private final int hashCode;
+
+    public IndexJob(Type type, String pid) {
+        this(type, pid, "");
+    }
+
+    public IndexJob(Type type, String pid, long delay, TimeUnit unit) {
+        this(type, pid, "", delay, unit);
+    }
 
     public IndexJob(Type type, String pid, String dsid) {
         this(type, pid, dsid, 0, TimeUnit.MILLISECONDS);
@@ -58,6 +68,25 @@ public class IndexJob extends DelayedQueueElement {
                 type.toString(),
                 pid, dsid);
     }
+
+    public void execute(Client client, ESLogger log) {
+        switch (type) {
+            case CREATE:
+                executeCreate(client, log);
+                break;
+            case UPDATE:
+                executeUpdate(client, log);
+                break;
+            case DELETE:
+                executeDelete(client, log);
+        }
+    }
+
+    protected abstract void executeDelete(Client client, ESLogger log);
+
+    protected abstract void executeUpdate(Client client, ESLogger log);
+
+    protected abstract void executeCreate(Client client, ESLogger log);
 
     public enum Type {
         CREATE,
