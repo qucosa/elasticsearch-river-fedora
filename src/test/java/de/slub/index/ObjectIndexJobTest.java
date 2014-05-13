@@ -34,6 +34,8 @@ import java.io.IOException;
 import java.text.ParseException;
 
 import static de.slub.index.IndexJob.Type.CREATE;
+import static de.slub.index.IndexJob.Type.DELETE;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
@@ -53,6 +55,20 @@ public class ObjectIndexJobTest {
                 .execute(fedoraClient, esNode.client(), esLogger);
         GetResponse response = esNode.client().get(new GetRequest("idx1", "type1", "test:1234")).actionGet();
         assertTrue(response.isExists());
+    }
+
+    @Test
+    public void deleteIndexJobRemovesDocumentFromIndex() {
+        ObjectIndexJob job1 = new ObjectIndexJob(CREATE, "test:1234");
+        job1.index("idx1")
+                .indexType("type1")
+                .execute(fedoraClient, esNode.client(), esLogger);
+        ObjectIndexJob job2 = new ObjectIndexJob(DELETE, "test:1234");
+        job2.index("idx1")
+                .indexType("type1")
+                .execute(fedoraClient, esNode.client(), esLogger);
+        GetResponse response = esNode.client().get(new GetRequest("idx1", "type1", "test:1234")).actionGet();
+        assertFalse(response.isExists());
     }
 
     @Before

@@ -19,6 +19,7 @@ package de.slub.index;
 import com.yourmediashelf.fedora.client.FedoraClient;
 import com.yourmediashelf.fedora.client.request.GetObjectProfile;
 import com.yourmediashelf.fedora.client.response.GetObjectProfileResponse;
+import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.xcontent.XContentBuilder;
@@ -39,7 +40,11 @@ public class ObjectIndexJob extends IndexJob {
 
     @Override
     protected void executeDelete(FedoraClient fedoraClient, Client client, ESLogger log) {
-        log.warn("Object Delete not yet implemented.");
+        try {
+            client.prepareDelete(index(), indexType(), pid()).execute().actionGet();
+        } catch (Exception ex) {
+            log.error(ex.getMessage());
+        }
     }
 
     @Override
