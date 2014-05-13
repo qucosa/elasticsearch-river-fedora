@@ -16,6 +16,7 @@
 
 package de.slub.index;
 
+import com.yourmediashelf.fedora.client.FedoraClient;
 import de.slub.util.concurrent.DelayedQueueElement;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.logging.ESLogger;
@@ -28,6 +29,8 @@ public abstract class IndexJob extends DelayedQueueElement {
     private final String pid;
     private final String dsid;
     private final int hashCode;
+    private String index;
+    private String indexType;
 
     public IndexJob(Type type, String pid) {
         this(type, pid, "");
@@ -46,8 +49,36 @@ public abstract class IndexJob extends DelayedQueueElement {
         this.type = type;
         this.pid = pid;
         this.dsid = dsid;
-        this.hashCode = new String(type + pid + dsid).hashCode();
+        this.hashCode = (type + pid + dsid).hashCode();
     }
+
+    public String index() {
+        return this.index;
+    }
+
+    public IndexJob index(String index) {
+        this.index = index;
+        return this;
+    }
+
+    public String indexType() {
+        return this.indexType;
+    }
+
+    public IndexJob indexType(String indexType) {
+        this.indexType = indexType;
+        return this;
+    }
+
+    public String pid() {
+        return pid;
+    }
+
+    public String dsid() {
+        return dsid;
+    }
+
+
 
     @Override
     public int hashCode() {
@@ -69,24 +100,24 @@ public abstract class IndexJob extends DelayedQueueElement {
                 pid, dsid);
     }
 
-    public void execute(Client client, ESLogger log) {
+    public void execute(FedoraClient fedoraClient, Client client, ESLogger log) {
         switch (type) {
             case CREATE:
-                executeCreate(client, log);
+                executeCreate(fedoraClient, client, log);
                 break;
             case UPDATE:
-                executeUpdate(client, log);
+                executeUpdate(fedoraClient, client, log);
                 break;
             case DELETE:
-                executeDelete(client, log);
+                executeDelete(fedoraClient, client, log);
         }
     }
 
-    protected abstract void executeDelete(Client client, ESLogger log);
+    protected abstract void executeDelete(FedoraClient fedoraClient, Client client, ESLogger log);
 
-    protected abstract void executeUpdate(Client client, ESLogger log);
+    protected abstract void executeUpdate(FedoraClient fedoraClient, Client client, ESLogger log);
 
-    protected abstract void executeCreate(Client client, ESLogger log);
+    protected abstract void executeCreate(FedoraClient fedoraClient, Client client, ESLogger log);
 
     public enum Type {
         CREATE,

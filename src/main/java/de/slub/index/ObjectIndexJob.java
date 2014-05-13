@@ -16,10 +16,16 @@
 
 package de.slub.index;
 
+import com.yourmediashelf.fedora.client.FedoraClient;
+import com.yourmediashelf.fedora.client.request.GetObjectProfile;
+import com.yourmediashelf.fedora.client.response.GetObjectProfileResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.logging.ESLogger;
+import org.elasticsearch.common.xcontent.XContentBuilder;
 
 import java.util.concurrent.TimeUnit;
+
+import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 
 public class ObjectIndexJob extends IndexJob {
 
@@ -32,18 +38,34 @@ public class ObjectIndexJob extends IndexJob {
     }
 
     @Override
-    protected void executeDelete(Client client, ESLogger log) {
+    protected void executeDelete(FedoraClient fedoraClient, Client client, ESLogger log) {
         log.warn("Object Delete not yet implemented.");
     }
 
     @Override
-    protected void executeUpdate(Client client, ESLogger log) {
+    protected void executeUpdate(FedoraClient fedoraClient, Client client, ESLogger log) {
         log.warn("Object Update not yet implemented.");
     }
 
     @Override
-    protected void executeCreate(Client client, ESLogger log) {
-        log.warn("Object Create not yet implemented.");
+    protected void executeCreate(FedoraClient fedoraClient, Client client, ESLogger log) {
+        try {
+            GetObjectProfileResponse profileResponse = (GetObjectProfileResponse)
+                    fedoraClient.execute(new GetObjectProfile(pid()));
+            XContentBuilder builder = jsonBuilder().startObject()
+                    .field("PID", profileResponse.getPid())
+                    .field("OBJ_STATE", profileResponse.getState())
+                    .field("OBJ_DATE_CREATED", profileResponse.getCreateDate())
+                    .field("OBJ_DATE_LAST_MODIFIED", profileResponse.getLastModifiedDate())
+                    .field("OBJ_OWNER_ID", profileResponse.getOwnerId())
+                    .field("OBJ_LABEL", profileResponse.getLabel());
+            builder.endObject();
+            client.prepareIndex(index(), indexType(), pid())
+                    .setSource(builder)
+                    .execute().actionGet();
+        } catch (Exception e) {
+            log.error(e.getMessage());
+        }
     }
 
 }

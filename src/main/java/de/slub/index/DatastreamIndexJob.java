@@ -16,6 +16,7 @@
 
 package de.slub.index;
 
+import com.yourmediashelf.fedora.client.FedoraClient;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.logging.ESLogger;
 
@@ -32,17 +33,17 @@ public class DatastreamIndexJob extends IndexJob {
     }
 
     @Override
-    protected void executeDelete(Client client, ESLogger log) {
+    protected void executeDelete(FedoraClient fedoraClient, Client client, ESLogger log) {
         log.warn("Datastream Delete not yet implemented.");
     }
 
     @Override
-    protected void executeUpdate(Client client, ESLogger log) {
+    protected void executeUpdate(FedoraClient fedoraClient, Client client, ESLogger log) {
         log.warn("Datastream Update not yet implemented.");
     }
 
     @Override
-    protected void executeCreate(Client client, ESLogger log) {
+    protected void executeCreate(FedoraClient fedoraClient, Client client, ESLogger log) {
         log.warn("Datastream Create not yet implemented.");
     }
 

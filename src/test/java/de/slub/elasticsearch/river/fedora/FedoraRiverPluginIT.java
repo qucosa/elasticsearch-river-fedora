@@ -47,7 +47,11 @@ public class FedoraRiverPluginIT {
 
     @BeforeClass
     public static void setupEsNode() throws InterruptedException, IOException {
-        node = NodeBuilder.nodeBuilder().settings(ImmutableSettings.settingsBuilder().put("gateway.type", "local")).local(true).node();
+        node = NodeBuilder.nodeBuilder().settings(ImmutableSettings.settingsBuilder()
+                .put("gateway.indexType", "local")
+                .put("path.data", "target/es/data")
+                .put("path.logs", "target/es/logs"))
+                .local(true).node();
         node.client().admin().cluster().prepareHealth().setWaitForYellowStatus().execute();
     }
 
@@ -62,7 +66,7 @@ public class FedoraRiverPluginIT {
     public void setupRiver() throws IOException, InterruptedException {
         node.client().prepareIndex("_river", "fr1", "_meta").setSource(
                 jsonBuilder().startObject()
-                        .field("type", "fedora-river")
+                        .field("indexType", "fedora-river")
                         .startObject("jms")
                         .field("brokerUrl", "tcp://" + FEDORA_HOST + ":61616").endObject()
                         .startObject("fedora")
