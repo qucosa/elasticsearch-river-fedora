@@ -17,13 +17,14 @@
 package de.slub.index;
 
 import com.yourmediashelf.fedora.client.FedoraClient;
+import com.yourmediashelf.fedora.client.FedoraClientException;
 import com.yourmediashelf.fedora.client.request.GetObjectProfile;
 import com.yourmediashelf.fedora.client.response.GetObjectProfileResponse;
-import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 
+import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
@@ -49,28 +50,32 @@ public class ObjectIndexJob extends IndexJob {
 
     @Override
     protected void executeUpdate(FedoraClient fedoraClient, Client client, ESLogger log) {
-        log.warn("Object Update not yet implemented.");
+        executeCreate(fedoraClient, client, log);
     }
 
     @Override
     protected void executeCreate(FedoraClient fedoraClient, Client client, ESLogger log) {
         try {
-            GetObjectProfileResponse profileResponse = (GetObjectProfileResponse)
-                    fedoraClient.execute(new GetObjectProfile(pid()));
-            XContentBuilder builder = jsonBuilder().startObject()
-                    .field("PID", profileResponse.getPid())
-                    .field("OBJ_STATE", profileResponse.getState())
-                    .field("OBJ_DATE_CREATED", profileResponse.getCreateDate())
-                    .field("OBJ_DATE_LAST_MODIFIED", profileResponse.getLastModifiedDate())
-                    .field("OBJ_OWNER_ID", profileResponse.getOwnerId())
-                    .field("OBJ_LABEL", profileResponse.getLabel());
-            builder.endObject();
             client.prepareIndex(index(), indexType(), pid())
-                    .setSource(builder)
+                    .setSource(buildIndexObject(fedoraClient))
                     .execute().actionGet();
         } catch (Exception e) {
             log.error(e.getMessage());
         }
+    }
+
+    private XContentBuilder buildIndexObject(FedoraClient fedoraClient) throws IOException, FedoraClientException {
+        GetObjectProfileResponse profileResponse = (GetObjectProfileResponse)
+                fedoraClient.execute(new GetObjectProfile(pid()));
+        XContentBuilder builder = jsonBuilder().startObject()
+                .field("PID", profileResponse.getPid())
+                .field("OBJ_STATE", profileResponse.getState())
+                .field("OBJ_DATE_CREATED", profileResponse.getCreateDate())
+                .field("OBJ_DATE_LAST_MODIFIED", profileResponse.getLastModifiedDate())
+                .field("OBJ_OWNER_ID", profileResponse.getOwnerId())
+                .field("OBJ_LABEL", profileResponse.getLabel());
+        builder.endObject();
+        return builder;
     }
 
 }

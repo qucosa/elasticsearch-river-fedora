@@ -33,10 +33,9 @@ import org.junit.*;
 import java.io.IOException;
 import java.text.ParseException;
 
-import static de.slub.index.IndexJob.Type.CREATE;
-import static de.slub.index.IndexJob.Type.DELETE;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static de.slub.index.IndexJob.Type.*;
+import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
+import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 
@@ -71,6 +70,24 @@ public class ObjectIndexJobTest {
         assertFalse(response.isExists());
     }
 
+    @Test
+    public void updatesIndexDocument() throws IOException, InterruptedException {
+        esNode.client().prepareIndex("idx1", "type1", "test:1234-2")
+                .setSource(jsonBuilder()
+                        .startObject()
+                        .field("should", "disappear")
+                        .endObject())
+                .execute().actionGet();
+
+        ObjectIndexJob job1 = new ObjectIndexJob(UPDATE, "test:1234-2");
+        job1.index("idx1")
+                .indexType("type1")
+                .execute(fedoraClient, esNode.client(), esLogger);
+        GetResponse response = esNode.client().get(new GetRequest("idx1", "type1", "test:1234-2")).actionGet();
+        assertTrue(response.getSourceAsMap().containsKey("PID"));
+        assertEquals(2, response.getVersion());
+    }
+
     @Before
     public void mockFedoraClient() throws FedoraClientException, ParseException {
         fedoraClient = mock(FedoraClient.class);
@@ -94,6 +111,8 @@ public class ObjectIndexJobTest {
     public static void setupEsNode() throws InterruptedException, IOException {
         esNode = NodeBuilder.nodeBuilder().settings(ImmutableSettings.settingsBuilder()
                 .put("gateway.indexType", "local")
+                .put("index.store.type", "memory")
+                .put("index.store.fs.memory.enabled", true)
                 .put("path.data", "target/es/data")
                 .put("path.logs", "target/es/logs"))
                 .local(true).node();
