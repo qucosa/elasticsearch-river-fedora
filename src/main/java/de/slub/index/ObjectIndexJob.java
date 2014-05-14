@@ -31,12 +31,19 @@ import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 
 public class ObjectIndexJob extends IndexJob {
 
+    public static final String ES_TYPE_NAME = "object";
+
     public ObjectIndexJob(Type type, String pid, int delay, TimeUnit unit) {
         super(type, pid, delay, unit);
     }
 
     public ObjectIndexJob(Type type, String pid) {
         super(type, pid);
+    }
+
+    @Override
+    public String indexType() {
+        return ES_TYPE_NAME;
     }
 
     @Override
@@ -69,11 +76,11 @@ public class ObjectIndexJob extends IndexJob {
                 fedoraClient.execute(new GetObjectProfile(pid()));
         XContentBuilder builder = jsonBuilder().startObject()
                 .field("PID", profileResponse.getPid())
-                .field("OBJ_STATE", profileResponse.getState())
-                .field("OBJ_DATE_CREATED", profileResponse.getCreateDate())
-                .field("OBJ_DATE_LAST_MODIFIED", profileResponse.getLastModifiedDate())
-                .field("OBJ_OWNER_ID", profileResponse.getOwnerId())
-                .field("OBJ_LABEL", profileResponse.getLabel());
+                .field("STATE", profileResponse.getState())
+                .field("LABEL", profileResponse.getLabel())
+                .field("OWNER_ID", profileResponse.getOwnerId())
+                .field("CREATED_DATE", profileResponse.getCreateDate())
+                .field("LAST_MODIFIED_DATE", profileResponse.getLastModifiedDate());
         builder.endObject();
         return builder;
     }

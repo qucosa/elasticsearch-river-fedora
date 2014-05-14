@@ -1,0 +1,31 @@
+{
+    "properties": {
+        "PID": {
+            "type": "string",
+            "store": true,
+            "index": "not_analyzed"
+        },
+        "STATE" : {
+            "type": "string",
+            "store": true,
+            "index": "not_analyzed"
+        },
+        "LABEL" : {
+            "type": "string",
+            "store": true
+        },
+        "OWNER_ID" : {
+            "type": "string",
+            "store": true,
+            "index": "not_analyzed"
+        },
+        "CREATED_DATE" : {
+            "type": "date",
+            "store": true
+        },
+        "LAST_MODIFIED_DATE" : {
+            "type": "date",
+            "store": true
+        }
+    }
+}

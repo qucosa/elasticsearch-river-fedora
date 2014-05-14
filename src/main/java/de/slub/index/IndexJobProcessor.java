@@ -29,11 +29,13 @@ public class IndexJobProcessor implements Runnable {
     private final BlockingQueue<IndexJob> queue;
     private final ESLogger log;
     private final FedoraClient fedoraClient;
+    private final String indexName;
     private boolean terminated = false;
 
-    public IndexJobProcessor(BlockingQueue<IndexJob> indexJobQueue, Client esClient, FedoraClient fedoraClient, ESLogger logger) {
+    public IndexJobProcessor(BlockingQueue<IndexJob> indexJobQueue, String indexName, Client esClient, FedoraClient fedoraClient, ESLogger logger) {
         this.client = esClient;
         this.queue = indexJobQueue;
+        this.indexName = indexName;
         this.fedoraClient = fedoraClient;
         this.log = logger;
     }
@@ -59,7 +61,8 @@ public class IndexJobProcessor implements Runnable {
     private void perform(IndexJob job) {
         log.debug("Performing: " + job);
         try {
-            job.execute(fedoraClient, client, log);
+            job.index(indexName)
+                    .execute(fedoraClient, client, log);
         } catch (Exception ex) {
             log.error("Error: " + ex.getMessage() + " Reason: " + ex.getCause().getMessage());
         }

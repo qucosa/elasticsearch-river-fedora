@@ -1,10 +1,9 @@
 {
     "type": "fedora-river",
+    "indexName": "fedora",
     "jms": {
         "brokerUrl": "failover:(tcp://localhost:61616)",
-        "messageSelector": "methodName LIKE 'modify%' \
-                OR methodName LIKE 'add%' \
-                OR methodName LIKE 'purge%' OR methodName = 'ingest'",
+        "messageSelector": "methodName LIKE 'modify%' OR methodName LIKE 'add%' OR methodName LIKE 'purge%' OR methodName = 'ingest'",
         "topicFilter": "fedora.apim.update"
     },
     "fedora": {

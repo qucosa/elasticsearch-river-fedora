@@ -1,0 +1,60 @@
+{
+    "properties": {
+        "DSID": {
+            "type": "string",
+            "store": true,
+            "index": "not_analyzed"
+        },
+        "LABEL" : {
+            "type": "string",
+            "store": true
+        },
+        "VERSION_ID" : {
+            "type": "string",
+            "store": true,
+            "index": "not_analyzed"
+        },
+        "CREATED_DATE" : {
+            "type": "date",
+            "store": true
+        },
+        "STATE" : {
+            "type": "string",
+            "store": true,
+            "index": "not_analyzed"
+        },
+        "MIMETYPE" : {
+            "type": "string",
+            "store": true,
+            "index": "not_analyzed"
+        },
+        "CONTROL_GROUP" : {
+            "type": "string",
+            "store": true,
+            "index": "not_analyzed"
+        },
+        "SIZE": {
+            "type": "long",
+            "store": true
+        },
+        "VERSIONABLE" : {
+            "type": "string",
+            "store": true,
+            "index": "not_analyzed"
+        },
+        "CHECKSUM_TYPE" : {
+            "type": "string",
+            "store": true,
+            "index": "not_analyzed"
+        },
+        "CHECKSUM" : {
+            "type": "string",
+            "store": true,
+            "index": "not_analyzed"
+        },
+        "CONTENT": {
+            "type": "attachment",
+            "store": false
+        }
+    }
+}

@@ -49,30 +49,24 @@ public class ObjectIndexJobTest {
     @Test
     public void executesCreateIndexDocument() throws FedoraClientException {
         ObjectIndexJob job = new ObjectIndexJob(CREATE, "test:1234");
-        job.index("idx1")
-                .indexType("type1")
-                .execute(fedoraClient, esNode.client(), esLogger);
-        GetResponse response = esNode.client().get(new GetRequest("idx1", "type1", "test:1234")).actionGet();
+        job.index("idx1").execute(fedoraClient, esNode.client(), esLogger);
+        GetResponse response = esNode.client().get(new GetRequest("idx1", ObjectIndexJob.ES_TYPE_NAME, "test:1234")).actionGet();
         assertTrue(response.isExists());
     }
 
     @Test
     public void deleteIndexJobRemovesDocumentFromIndex() {
         ObjectIndexJob job1 = new ObjectIndexJob(CREATE, "test:1234");
-        job1.index("idx1")
-                .indexType("type1")
-                .execute(fedoraClient, esNode.client(), esLogger);
+        job1.index("idx1").execute(fedoraClient, esNode.client(), esLogger);
         ObjectIndexJob job2 = new ObjectIndexJob(DELETE, "test:1234");
-        job2.index("idx1")
-                .indexType("type1")
-                .execute(fedoraClient, esNode.client(), esLogger);
-        GetResponse response = esNode.client().get(new GetRequest("idx1", "type1", "test:1234")).actionGet();
+        job2.index("idx1").execute(fedoraClient, esNode.client(), esLogger);
+        GetResponse response = esNode.client().get(new GetRequest("idx1", ObjectIndexJob.ES_TYPE_NAME, "test:1234")).actionGet();
         assertFalse(response.isExists());
     }
 
     @Test
     public void updatesIndexDocument() throws IOException, InterruptedException {
-        esNode.client().prepareIndex("idx1", "type1", "test:1234-2")
+        esNode.client().prepareIndex("idx1", ObjectIndexJob.ES_TYPE_NAME, "test:1234-2")
                 .setSource(jsonBuilder()
                         .startObject()
                         .field("should", "disappear")
@@ -80,10 +74,8 @@ public class ObjectIndexJobTest {
                 .execute().actionGet();
 
         ObjectIndexJob job1 = new ObjectIndexJob(UPDATE, "test:1234-2");
-        job1.index("idx1")
-                .indexType("type1")
-                .execute(fedoraClient, esNode.client(), esLogger);
-        GetResponse response = esNode.client().get(new GetRequest("idx1", "type1", "test:1234-2")).actionGet();
+        job1.index("idx1").execute(fedoraClient, esNode.client(), esLogger);
+        GetResponse response = esNode.client().get(new GetRequest("idx1", ObjectIndexJob.ES_TYPE_NAME, "test:1234-2")).actionGet();
         assertTrue(response.getSourceAsMap().containsKey("PID"));
         assertEquals(2, response.getVersion());
     }

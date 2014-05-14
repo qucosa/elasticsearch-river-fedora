@@ -22,10 +22,16 @@ import com.yourmediashelf.fedora.client.request.DescribeRepository;
 import com.yourmediashelf.fedora.client.response.DescribeRepositoryResponse;
 import com.yourmediashelf.fedora.generated.access.FedoraRepository;
 import de.slub.fedora.jms.APIMConsumer;
+import de.slub.index.DatastreamIndexJob;
 import de.slub.index.IndexJob;
 import de.slub.index.IndexJobProcessor;
+import de.slub.index.ObjectIndexJob;
 import de.slub.util.concurrent.UniqueDelayQueue;
 import org.apache.activemq.ConfigurationException;
+import org.apache.commons.io.IOUtils;
+import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
+import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsRequest;
+import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.util.concurrent.EsExecutors;
@@ -35,12 +41,16 @@ import org.elasticsearch.river.River;
 import org.elasticsearch.river.RiverName;
 import org.elasticsearch.river.RiverSettings;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Map;
 
 public class FedoraRiver extends AbstractRiverComponent implements River {
 
+    private static final String DEFAULT_INDEX_NAME = "fedora";
+    private final Client esClient;
     private APIMConsumer apimConsumer;
     private IndexJobProcessor indexJobProcessor;
     private FedoraClient fedoraClient;
@@ -52,10 +62,12 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
     private String fedoraUrl;
     private String username;
     private String password;
+    private String indexName;
 
     @Inject
     protected FedoraRiver(RiverName riverName, RiverSettings settings, Client client) throws Exception {
         super(riverName, settings);
+        esClient = client;
 
         configure(settings);
 
@@ -66,6 +78,21 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
         setupIndexJobProcessorThread(settings, client, indexJobQueue);
 
         logger.info("created");
+    }
+
+    @Override
+    public void start() {
+        setupIndex(esClient, indexName);
+        apimConsumerThread.start();
+        indexJobProcessorThread.start();
+        logger.info("started");
+    }
+
+    @Override
+    public void close() {
+        apimConsumer.terminate();
+        indexJobProcessor.terminate();
+        logger.info("closed");
     }
 
     private void setupFedoraClient() throws Exception {
@@ -88,6 +115,10 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
     }
 
     private void configure(RiverSettings settings) throws ConfigurationException {
+        indexName = XContentMapValues.nodeStringValue(
+                settings.settings().get("indexName"), DEFAULT_INDEX_NAME
+        );
+
         if (settings.settings().containsKey("jms")) {
             Map<String, Object> jmsSettings =
                     XContentMapValues.nodeMapValue(settings.settings().get("jms"), "jms");
@@ -117,6 +148,7 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
     private void setupIndexJobProcessorThread(RiverSettings settings, Client client, UniqueDelayQueue<IndexJob> indexJobQueue) {
         indexJobProcessor = new IndexJobProcessor(
                 indexJobQueue,
+                indexName,
                 client,
                 fedoraClient,
                 logger
@@ -139,17 +171,32 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
                 "fedora-river-apimConsumer").newThread(apimConsumer);
     }
 
-    @Override
-    public void start() {
-        apimConsumerThread.start();
-        indexJobProcessorThread.start();
-        logger.info("started");
+    private void setupIndex(Client esClient, String indexName) {
+        IndicesExistsResponse response = esClient.admin().indices().exists(new IndicesExistsRequest(indexName)).actionGet();
+        if (response.isExists()) {
+            logger.info("Found index {}", indexName);
+        } else {
+            esClient.admin().indices().create(new CreateIndexRequest(indexName)).actionGet();
+            logger.info("Created index {}", indexName);
+        }
+
+        prepareMapping(esClient, indexName, ObjectIndexJob.ES_TYPE_NAME,
+                this.getClass().getResourceAsStream("/mapping-object.json"));
+        prepareMapping(esClient, indexName, DatastreamIndexJob.ES_TYPE_NAME,
+                this.getClass().getResourceAsStream("/mapping-datastream.json"));
     }
 
-    @Override
-    public void close() {
-        apimConsumer.terminate();
-        indexJobProcessor.terminate();
-        logger.info("closed");
+    private void prepareMapping(Client esClient, String indexName, String type, InputStream mapping) {
+        try {
+            esClient.admin().indices().preparePutMapping(indexName)
+                    .setType(type)
+                    .setSource(IOUtils.toString(mapping))
+                    .execute()
+                    .actionGet();
+        } catch (IOException ex) {
+            logger.error("Could not initialize mapping for {}/{}. Reason: {}",
+                    indexName, type, ex.getMessage());
+        }
     }
+
 }

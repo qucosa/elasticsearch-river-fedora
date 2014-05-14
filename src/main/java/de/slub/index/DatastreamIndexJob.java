@@ -24,12 +24,19 @@ import java.util.concurrent.TimeUnit;
 
 public class DatastreamIndexJob extends IndexJob {
 
+    public static final String ES_TYPE_NAME = "datastream";
+
     public DatastreamIndexJob(Type create, String pid, String dsid, int delay, TimeUnit unit) {
         super(create, pid, dsid, delay, unit);
     }
 
     public DatastreamIndexJob(Type type, String pid, String dsid) {
         super(type, pid, dsid);
+    }
+
+    @Override
+    public String indexType() {
+        return ES_TYPE_NAME;
     }
 
     @Override

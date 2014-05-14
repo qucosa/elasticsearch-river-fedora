@@ -17,6 +17,8 @@
 package de.slub.elasticsearch.river.fedora;
 
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
+import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsRequest;
+import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
 import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
 import org.elasticsearch.action.get.GetRequest;
 import org.elasticsearch.action.get.GetResponse;
@@ -31,8 +33,9 @@ import java.util.concurrent.TimeUnit;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
-@Ignore("Integration test needs running Fedora instance")
+@Ignore("Integration test requires a running Fedora instance")
 public class FedoraRiverPluginIT {
 
     public static final String FEDORA_HOST = "localhost";
@@ -43,12 +46,22 @@ public class FedoraRiverPluginIT {
         assertFalse(response.getSourceAsMap().containsKey("error"));
     }
 
+    @Test
+    public void riverInitializesObjectIndex() {
+        IndicesExistsResponse response = node.client().admin().indices().exists(
+                new IndicesExistsRequest("fedora")
+        ).actionGet();
+        assertTrue(response.isExists());
+    }
+
     private static Node node;
 
     @BeforeClass
     public static void setupEsNode() throws InterruptedException, IOException {
         node = NodeBuilder.nodeBuilder().settings(ImmutableSettings.settingsBuilder()
                 .put("gateway.indexType", "local")
+                .put("index.store.type", "memory")
+                .put("index.store.fs.memory.enabled", true)
                 .put("path.data", "target/es/data")
                 .put("path.logs", "target/es/logs"))
                 .local(true).node();
@@ -66,7 +79,8 @@ public class FedoraRiverPluginIT {
     public void setupRiver() throws IOException, InterruptedException {
         node.client().prepareIndex("_river", "fr1", "_meta").setSource(
                 jsonBuilder().startObject()
-                        .field("indexType", "fedora-river")
+                        .field("type", "fedora-river")
+                        .field("indexName", "fedora")
                         .startObject("jms")
                         .field("brokerUrl", "tcp://" + FEDORA_HOST + ":61616").endObject()
                         .startObject("fedora")
@@ -78,7 +92,7 @@ public class FedoraRiverPluginIT {
         node.client().admin().indices().refresh(
                 new RefreshRequest()
         );
-        Thread.sleep(TimeUnit.SECONDS.toMillis(10));
+        Thread.sleep(TimeUnit.SECONDS.toMillis(5));
     }
 
     @After
