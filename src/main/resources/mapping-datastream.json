@@ -38,7 +38,7 @@
             "store": true
         },
         "VERSIONABLE" : {
-            "type": "string",
+            "type": "boolean",
             "store": true,
             "index": "not_analyzed"
         },
