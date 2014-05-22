@@ -1,5 +1,10 @@
 {
     "properties": {
+        "PID": {
+            "type": "string",
+            "store": true,
+            "index": "not_analyzed"
+        },
         "DSID": {
             "type": "string",
             "store": true,

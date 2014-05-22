@@ -77,6 +77,7 @@ public class DatastreamIndexJob extends IndexJob {
                 fedoraClient.execute(new GetDatastream(pid(), dsid()));
         DatastreamProfile profile = response.getDatastreamProfile();
         return jsonBuilder().startObject()
+                .field("PID", profile.getPid())
                 .field("DSID", profile.getDsID())
                 .field("LABEL", profile.getDsLabel())
                 .field("VERSION_ID", profile.getDsVersionID())
