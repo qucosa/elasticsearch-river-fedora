@@ -23,6 +23,8 @@ import org.elasticsearch.common.logging.ESLogger;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
+
 public class IndexJobProcessor implements Runnable {
 
     private final Client client;
@@ -32,7 +34,8 @@ public class IndexJobProcessor implements Runnable {
     private final String indexName;
     private boolean terminated = false;
 
-    public IndexJobProcessor(BlockingQueue<IndexJob> indexJobQueue, String indexName, Client esClient, FedoraClient fedoraClient, ESLogger logger) {
+    public IndexJobProcessor(BlockingQueue<IndexJob> indexJobQueue, String indexName, Client esClient,
+                             FedoraClient fedoraClient, ESLogger logger) {
         this.client = esClient;
         this.queue = indexJobQueue;
         this.indexName = indexName;
@@ -64,7 +67,20 @@ public class IndexJobProcessor implements Runnable {
             job.index(indexName)
                     .execute(fedoraClient, client, log);
         } catch (Exception ex) {
-            log.error("Error: " + ex.getMessage() + " Reason: " + ex.getCause().getMessage());
+            log.error("Error: " + ex.getMessage());
+
+            try {
+                client.prepareIndex(indexName, "error", job.pid())
+                        .setSource(
+                                jsonBuilder().startObject()
+                                        .field("job", job.toString())
+                                        .field("message", ex.getMessage())
+                                        .endObject()
+                        ).execute().actionGet();
+            } catch (Exception e) {
+                log.error("Cannot write index error to node: " + e.getMessage());
+            }
+
         }
     }
 }

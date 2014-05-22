@@ -79,7 +79,6 @@ public abstract class IndexJob extends DelayedQueueElement {
     }
 
 
-
     @Override
     public int hashCode() {
         return hashCode;
@@ -100,7 +99,8 @@ public abstract class IndexJob extends DelayedQueueElement {
                 pid, dsid);
     }
 
-    public void execute(FedoraClient fedoraClient, Client client, ESLogger log) {
+    public void execute(FedoraClient fedoraClient, Client client, ESLogger log)
+            throws Exception {
         switch (type) {
             case CREATE:
                 executeCreate(fedoraClient, client, log);
@@ -113,11 +113,11 @@ public abstract class IndexJob extends DelayedQueueElement {
         }
     }
 
-    protected abstract void executeDelete(FedoraClient fedoraClient, Client client, ESLogger log);
+    protected abstract void executeDelete(FedoraClient fedoraClient, Client client, ESLogger log) throws Exception;
 
-    protected abstract void executeUpdate(FedoraClient fedoraClient, Client client, ESLogger log);
+    protected abstract void executeUpdate(FedoraClient fedoraClient, Client client, ESLogger log) throws Exception;
 
-    protected abstract void executeCreate(FedoraClient fedoraClient, Client client, ESLogger log);
+    protected abstract void executeCreate(FedoraClient fedoraClient, Client client, ESLogger log) throws Exception;
 
     public enum Type {
         CREATE,

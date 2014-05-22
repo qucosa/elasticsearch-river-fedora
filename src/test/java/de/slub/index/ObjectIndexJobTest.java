@@ -46,8 +46,28 @@ public class ObjectIndexJobTest {
     private static Node esNode;
     private FedoraClient fedoraClient;
 
+    @BeforeClass
+    public static void setupEsNode() throws InterruptedException, IOException {
+        esNode = NodeBuilder.nodeBuilder().settings(ImmutableSettings.settingsBuilder()
+                .put("gateway.type", "none")
+                .put("index.store.type", "memory")
+                .put("index.store.fs.memory.enabled", true)
+                .put("path.data", "target/es/data")
+                .put("path.logs", "target/es/logs")
+                .put("index.number_of_shards", "1")
+                .put("index.number_of_replicas", "0"))
+                .local(true).node();
+        esNode.client().admin().cluster().prepareHealth().setWaitForYellowStatus().execute().actionGet();
+    }
+
+    @AfterClass
+    public static void teardownEsNode() {
+        esNode.client().close();
+        esNode.stop();
+    }
+
     @Test
-    public void executesCreateIndexDocument() throws FedoraClientException {
+    public void executesCreateIndexDocument() throws Exception {
         ObjectIndexJob job = new ObjectIndexJob(CREATE, "test:1234");
         job.index("idx1").execute(fedoraClient, esNode.client(), esLogger);
         GetResponse response = esNode.client().get(new GetRequest("idx1", ObjectIndexJob.ES_TYPE_NAME, "test:1234")).actionGet();
@@ -55,7 +75,7 @@ public class ObjectIndexJobTest {
     }
 
     @Test
-    public void deleteIndexJobRemovesDocumentFromIndex() {
+    public void deleteIndexJobRemovesDocumentFromIndex() throws Exception {
         ObjectIndexJob job1 = new ObjectIndexJob(CREATE, "test:1234");
         job1.index("idx1").execute(fedoraClient, esNode.client(), esLogger);
         ObjectIndexJob job2 = new ObjectIndexJob(DELETE, "test:1234");
@@ -65,7 +85,7 @@ public class ObjectIndexJobTest {
     }
 
     @Test
-    public void updatesIndexDocument() throws IOException, InterruptedException {
+    public void updatesIndexDocument() throws Exception {
         esNode.client().prepareIndex("idx1", ObjectIndexJob.ES_TYPE_NAME, "test:1234-2")
                 .setSource(jsonBuilder()
                         .startObject()
@@ -97,24 +117,6 @@ public class ObjectIndexJobTest {
     @After
     public void resetMockFedoraClient() {
         reset(fedoraClient);
-    }
-
-    @BeforeClass
-    public static void setupEsNode() throws InterruptedException, IOException {
-        esNode = NodeBuilder.nodeBuilder().settings(ImmutableSettings.settingsBuilder()
-                .put("gateway.indexType", "local")
-                .put("index.store.type", "memory")
-                .put("index.store.fs.memory.enabled", true)
-                .put("path.data", "target/es/data")
-                .put("path.logs", "target/es/logs"))
-                .local(true).node();
-        esNode.client().admin().cluster().prepareHealth().setWaitForYellowStatus().execute();
-    }
-
-    @AfterClass
-    public static void teardownEsNode() {
-        esNode.client().close();
-        esNode.stop();
     }
 
 
