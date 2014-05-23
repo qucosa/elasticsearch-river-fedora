@@ -10,30 +10,30 @@
             "store": true,
             "index": "not_analyzed"
         },
-        "LABEL" : {
+        "LABEL": {
             "type": "string",
             "store": true
         },
-        "VERSION_ID" : {
+        "VERSION_ID": {
             "type": "string",
             "store": true,
             "index": "not_analyzed"
         },
-        "CREATED_DATE" : {
+        "CREATED_DATE": {
             "type": "date",
             "store": true
         },
-        "STATE" : {
+        "STATE": {
             "type": "string",
             "store": true,
             "index": "not_analyzed"
         },
-        "MIMETYPE" : {
+        "MIMETYPE": {
             "type": "string",
             "store": true,
             "index": "not_analyzed"
         },
-        "CONTROL_GROUP" : {
+        "CONTROL_GROUP": {
             "type": "string",
             "store": true,
             "index": "not_analyzed"
@@ -42,23 +42,34 @@
             "type": "long",
             "store": true
         },
-        "VERSIONABLE" : {
+        "VERSIONABLE": {
             "type": "boolean",
             "store": true,
             "index": "not_analyzed"
         },
-        "CHECKSUM_TYPE" : {
+        "CHECKSUM_TYPE": {
             "type": "string",
             "store": true,
             "index": "not_analyzed"
         },
-        "CHECKSUM" : {
+        "CHECKSUM": {
             "type": "string",
             "store": true,
             "index": "not_analyzed"
         },
         "CONTENT": {
-            "type": "attachment",
+            "type": "object",
+            "properties": {
+                "_url": {
+                    "type": "string",
+                    "store": true,
+                    "index": "not_analyzed"
+                },
+                "_size": {
+                    "type": "long",
+                    "store": true
+                }
+            },
             "store": false
         }
     }
