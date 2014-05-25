@@ -20,6 +20,7 @@ import com.yourmediashelf.fedora.client.FedoraClient;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.logging.ESLogger;
 
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -65,8 +66,12 @@ public class IndexJobProcessor implements Runnable {
     private void perform(IndexJob job) {
         log.debug("Performing: " + job);
         try {
-            job.index(indexName)
+            List<IndexJob> newJobs = job
+                    .index(indexName)
                     .execute(fedoraClient, client, log);
+
+            if (newJobs != null) for (IndexJob indexJob : newJobs) queue.add(indexJob);
+
         } catch (Exception ex) {
             log.error("Error: " + ex.getMessage());
 

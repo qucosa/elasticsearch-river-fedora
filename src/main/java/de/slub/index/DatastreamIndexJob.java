@@ -53,20 +53,23 @@ public class DatastreamIndexJob extends IndexJob {
     }
 
     @Override
-    protected void executeDelete(FedoraClient fedoraClient, Client client, ESLogger log) {
+    protected java.util.List<IndexJob> executeDelete(FedoraClient fedoraClient, Client client, ESLogger log) {
         client.prepareDelete(index(), indexType(), pid()).execute().actionGet();
+        return null;
     }
 
     @Override
-    protected void executeUpdate(FedoraClient fedoraClient, Client client, ESLogger log) throws Exception {
+    protected java.util.List<IndexJob> executeUpdate(FedoraClient fedoraClient, Client client, ESLogger log) throws Exception {
         executeCreate(fedoraClient, client, log);
+        return null;
     }
 
     @Override
-    protected void executeCreate(FedoraClient fedoraClient, Client client, ESLogger log) throws Exception {
+    protected java.util.List<IndexJob> executeCreate(FedoraClient fedoraClient, Client client, ESLogger log) throws Exception {
         client.prepareIndex(index(), indexType(), pid())
                 .setSource(buildIndexObject(fedoraClient))
                 .execute().actionGet();
+        return null;
     }
 
     private XContentBuilder buildIndexObject(FedoraClient fedoraClient) throws Exception {

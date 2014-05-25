@@ -21,6 +21,8 @@ import de.slub.util.concurrent.DelayedQueueElement;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.logging.ESLogger;
 
+import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public abstract class IndexJob extends DelayedQueueElement {
@@ -99,25 +101,25 @@ public abstract class IndexJob extends DelayedQueueElement {
                 pid, dsid);
     }
 
-    public void execute(FedoraClient fedoraClient, Client client, ESLogger log)
+    public List<IndexJob> execute(FedoraClient fedoraClient, Client client, ESLogger log)
             throws Exception {
         switch (type) {
             case CREATE:
-                executeCreate(fedoraClient, client, log);
-                break;
+                return executeCreate(fedoraClient, client, log);
             case UPDATE:
-                executeUpdate(fedoraClient, client, log);
-                break;
+                return executeUpdate(fedoraClient, client, log);
             case DELETE:
-                executeDelete(fedoraClient, client, log);
+                return executeDelete(fedoraClient, client, log);
+            default:
+                return null;
         }
     }
 
-    protected abstract void executeDelete(FedoraClient fedoraClient, Client client, ESLogger log) throws Exception;
+    protected abstract List<IndexJob> executeDelete(FedoraClient fedoraClient, Client client, ESLogger log) throws Exception;
 
-    protected abstract void executeUpdate(FedoraClient fedoraClient, Client client, ESLogger log) throws Exception;
+    protected abstract List<IndexJob> executeUpdate(FedoraClient fedoraClient, Client client, ESLogger log) throws Exception;
 
-    protected abstract void executeCreate(FedoraClient fedoraClient, Client client, ESLogger log) throws Exception;
+    protected abstract List<IndexJob> executeCreate(FedoraClient fedoraClient, Client client, ESLogger log) throws Exception;
 
     public enum Type {
         CREATE,
