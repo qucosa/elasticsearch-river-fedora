@@ -38,7 +38,7 @@ public class MessageMapperTest {
         TextMessage message = mock(TextMessage.class);
         when(message.getStringProperty(eq("pid"))).thenReturn("test:4711");
         when(message.getStringProperty(eq("methodName"))).thenReturn("getObjectXML");
-        when(message.getText()).thenReturn(getContent("/getObjectXML.xml"));
+        when(message.getText()).thenReturn(getContent("/jms/getObjectXML.xml"));
 
         assertNull(MessageMapper.map(message));
     }
@@ -48,7 +48,7 @@ public class MessageMapperTest {
         TextMessage message = mock(TextMessage.class);
         when(message.getStringProperty(eq("pid"))).thenReturn("test-rest:1");
         when(message.getStringProperty(eq("methodName"))).thenReturn("ingest");
-        when(message.getText()).thenReturn(getContent("/ingest.xml"));
+        when(message.getText()).thenReturn(getContent("/jms/ingest.xml"));
 
         IndexJob ij = MessageMapper.map(message);
 
@@ -62,7 +62,7 @@ public class MessageMapperTest {
         TextMessage message = mock(TextMessage.class);
         when(message.getStringProperty(eq("pid"))).thenReturn("test-rest:1");
         when(message.getStringProperty(eq("methodName"))).thenReturn("addDatastream");
-        when(message.getText()).thenReturn(getContent("/addDatastream.xml"));
+        when(message.getText()).thenReturn(getContent("/jms/addDatastream.xml"));
 
         IndexJob ij = MessageMapper.map(message);
 
@@ -76,7 +76,7 @@ public class MessageMapperTest {
         TextMessage message = mock(TextMessage.class);
         when(message.getStringProperty(eq("pid"))).thenReturn("test-rest:1");
         when(message.getStringProperty(eq("methodName"))).thenReturn("modifyDatastreamByValue");
-        when(message.getText()).thenReturn(getContent("/modifyDatastreamByValue.xml"));
+        when(message.getText()).thenReturn(getContent("/jms/modifyDatastreamByValue.xml"));
 
         IndexJob ij = MessageMapper.map(message);
 
@@ -90,7 +90,7 @@ public class MessageMapperTest {
         TextMessage message = mock(TextMessage.class);
         when(message.getStringProperty(eq("pid"))).thenReturn("test-rest:1");
         when(message.getStringProperty(eq("methodName"))).thenReturn("modifyObject");
-        when(message.getText()).thenReturn(getContent("/modifyObject.xml"));
+        when(message.getText()).thenReturn(getContent("/jms/modifyObject.xml"));
 
         IndexJob ij = MessageMapper.map(message);
 
@@ -104,7 +104,7 @@ public class MessageMapperTest {
         TextMessage message = mock(TextMessage.class);
         when(message.getStringProperty(eq("pid"))).thenReturn("test-rest:1");
         when(message.getStringProperty(eq("methodName"))).thenReturn("purgeDatastream");
-        when(message.getText()).thenReturn(getContent("/purgeDatastream.xml"));
+        when(message.getText()).thenReturn(getContent("/jms/purgeDatastream.xml"));
 
         IndexJob ij = MessageMapper.map(message);
 
@@ -118,7 +118,7 @@ public class MessageMapperTest {
         TextMessage message = mock(TextMessage.class);
         when(message.getStringProperty(eq("pid"))).thenReturn("test-rest:1");
         when(message.getStringProperty(eq("methodName"))).thenReturn("purgeObject");
-        when(message.getText()).thenReturn(getContent("/purgeObject.xml"));
+        when(message.getText()).thenReturn(getContent("/jms/purgeObject.xml"));
 
         IndexJob ij = MessageMapper.map(message);
 

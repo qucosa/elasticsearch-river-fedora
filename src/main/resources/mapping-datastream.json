@@ -60,14 +60,18 @@
         "CONTENT": {
             "type": "object",
             "properties": {
-                "_url": {
+                "_uri": {
                     "type": "string",
                     "store": true,
                     "index": "not_analyzed"
                 },
-                "_size": {
-                    "type": "long",
-                    "store": true
+                "_json": {
+                    "type": "object",
+                    "store": false
+                },
+                "_content": {
+                    "type": "string",
+                    "store": false
                 }
             },
             "store": false

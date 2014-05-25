@@ -48,27 +48,21 @@ public class ObjectIndexJob extends IndexJob {
 
     @Override
     protected void executeDelete(FedoraClient fedoraClient, Client client, ESLogger log) {
-        try {
-            client.prepareDelete(index(), indexType(), pid()).execute().actionGet();
-        } catch (Exception ex) {
-            log.error(ex.getMessage());
-        }
+        client.prepareDelete(index(), indexType(), pid()).execute().actionGet();
+        //TODO Delete all dependend datastream objects
     }
 
     @Override
-    protected void executeUpdate(FedoraClient fedoraClient, Client client, ESLogger log) {
+    protected void executeUpdate(FedoraClient fedoraClient, Client client, ESLogger log) throws IOException, FedoraClientException {
         executeCreate(fedoraClient, client, log);
     }
 
     @Override
-    protected void executeCreate(FedoraClient fedoraClient, Client client, ESLogger log) {
-        try {
-            client.prepareIndex(index(), indexType(), pid())
-                    .setSource(buildIndexObject(fedoraClient))
-                    .execute().actionGet();
-        } catch (Exception e) {
-            log.error(e.getMessage());
-        }
+    protected void executeCreate(FedoraClient fedoraClient, Client client, ESLogger log) throws IOException, FedoraClientException {
+        client.prepareIndex(index(), indexType(), pid())
+                .setSource(buildIndexObject(fedoraClient))
+                .execute().actionGet();
+        //TODO index all dependend datastream objects
     }
 
     private XContentBuilder buildIndexObject(FedoraClient fedoraClient) throws IOException, FedoraClientException {

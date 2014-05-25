@@ -17,15 +17,20 @@
 package de.slub.index;
 
 import com.yourmediashelf.fedora.client.FedoraClient;
-import com.yourmediashelf.fedora.client.FedoraClientException;
 import com.yourmediashelf.fedora.client.request.GetDatastream;
+import com.yourmediashelf.fedora.client.request.GetDatastreamDissemination;
 import com.yourmediashelf.fedora.client.response.GetDatastreamResponse;
 import com.yourmediashelf.fedora.generated.management.DatastreamProfile;
+import de.slub.util.xslt.JsonTransformer;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.common.xcontent.XContentFactory;
+import org.elasticsearch.common.xcontent.XContentParser;
+import org.elasticsearch.common.xcontent.XContentType;
 
-import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
 import java.util.concurrent.TimeUnit;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
@@ -49,34 +54,26 @@ public class DatastreamIndexJob extends IndexJob {
 
     @Override
     protected void executeDelete(FedoraClient fedoraClient, Client client, ESLogger log) {
-        try {
-            client.prepareDelete(index(), indexType(), dsid()).execute().actionGet();
-        } catch (Exception ex) {
-            log.error(ex.getMessage());
-        }
+        client.prepareDelete(index(), indexType(), dsid()).execute().actionGet();
     }
 
     @Override
-    protected void executeUpdate(FedoraClient fedoraClient, Client client, ESLogger log) {
+    protected void executeUpdate(FedoraClient fedoraClient, Client client, ESLogger log) throws Exception {
         executeCreate(fedoraClient, client, log);
     }
 
     @Override
-    protected void executeCreate(FedoraClient fedoraClient, Client client, ESLogger log) {
-        try {
-            client.prepareIndex(index(), indexType(), dsid())
-                    .setSource(buildIndexObject(fedoraClient))
-                    .execute().actionGet();
-        } catch (Exception e) {
-            log.error(e.getMessage());
-        }
+    protected void executeCreate(FedoraClient fedoraClient, Client client, ESLogger log) throws Exception {
+        client.prepareIndex(index(), indexType(), dsid())
+                .setSource(buildIndexObject(fedoraClient))
+                .execute().actionGet();
     }
 
-    private XContentBuilder buildIndexObject(FedoraClient fedoraClient) throws IOException, FedoraClientException {
+    private XContentBuilder buildIndexObject(FedoraClient fedoraClient) throws Exception {
         GetDatastreamResponse response = (GetDatastreamResponse)
                 fedoraClient.execute(new GetDatastream(pid(), dsid()));
         DatastreamProfile profile = response.getDatastreamProfile();
-        return jsonBuilder().startObject()
+        XContentBuilder jb = jsonBuilder().startObject()
                 .field("PID", profile.getPid())
                 .field("DSID", profile.getDsID())
                 .field("LABEL", profile.getDsLabel())
@@ -89,8 +86,42 @@ public class DatastreamIndexJob extends IndexJob {
                 .field("VERSIONABLE", (profile.getDsVersionable().equals("true")))
                 .field("CHECKSUM_TYPE", profile.getDsChecksumType())
                 .field("CHECKSUM", profile.getDsChecksum())
-                        //.field("CONTENT", dissemination)
-                .endObject();
+                .startObject("CONTENT");
+        buildDatastreamIndexObject(jb, profile, fedoraClient).endObject();
+        jb.endObject();
+        return jb;
+    }
+
+    private XContentBuilder buildDatastreamIndexObject(XContentBuilder builder, DatastreamProfile profile, FedoraClient fedoraClient) throws Exception {
+        URI disseminationURI = new URI(
+                String.format("objects/%s/datastreams/%s/content",
+                        profile.getPid(),
+                        profile.getDsID())
+        );
+        builder.field("_uri", disseminationURI.toASCIIString());
+
+        if (profile.getDsMIME().endsWith("/xml")) {
+            // map to JSON
+
+            InputStream disseminationInputStream = fedoraClient.execute(new GetDatastreamDissemination(
+                    profile.getPid(), profile.getDsID()
+            )).getEntityInputStream();
+
+            JsonTransformer jsonTransformer = JsonTransformer.getInstance();
+            XContentParser parser = XContentFactory.xContent(XContentType.JSON).createParser(
+                    jsonTransformer.toJson(disseminationInputStream)
+            );
+            parser.nextToken();
+
+            builder.field("_json");
+            builder.copyCurrentStructure(parser);
+
+        } else {
+            // try to extract full text
+            builder.field("_content", "Crash Boom Bang!");
+        }
+
+        return builder;
     }
 
 }
