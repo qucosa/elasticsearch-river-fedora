@@ -27,6 +27,7 @@ import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 
 public class IndexJobProcessor implements Runnable {
 
+    public static final String ES_ERROR_TYPE_NAME = "error";
     private final Client client;
     private final BlockingQueue<IndexJob> queue;
     private final ESLogger log;
@@ -70,7 +71,7 @@ public class IndexJobProcessor implements Runnable {
             log.error("Error: " + ex.getMessage());
 
             try {
-                client.prepareIndex(indexName, "error", job.pid())
+                client.prepareIndex(indexName, ES_ERROR_TYPE_NAME, job.pid())
                         .setSource(
                                 jsonBuilder().startObject()
                                         .field("job", job.toString())

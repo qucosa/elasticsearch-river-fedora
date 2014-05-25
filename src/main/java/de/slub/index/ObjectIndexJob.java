@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
+import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 
 public class ObjectIndexJob extends IndexJob {
 
@@ -47,9 +48,11 @@ public class ObjectIndexJob extends IndexJob {
     }
 
     @Override
-    protected void executeDelete(FedoraClient fedoraClient, Client client, ESLogger log) {
-        client.prepareDelete(index(), indexType(), pid()).execute().actionGet();
-        //TODO Delete all dependend datastream objects
+    protected void executeDelete(FedoraClient fedoraClient, Client client, ESLogger log) throws IOException {
+        client.prepareDeleteByQuery(index())
+                .setTypes(ES_TYPE_NAME, DatastreamIndexJob.ES_TYPE_NAME, IndexJobProcessor.ES_ERROR_TYPE_NAME)
+                .setQuery(termQuery("_id", pid()))
+                .execute().actionGet();
     }
 
     @Override

@@ -54,7 +54,7 @@ public class DatastreamIndexJob extends IndexJob {
 
     @Override
     protected void executeDelete(FedoraClient fedoraClient, Client client, ESLogger log) {
-        client.prepareDelete(index(), indexType(), dsid()).execute().actionGet();
+        client.prepareDelete(index(), indexType(), pid()).execute().actionGet();
     }
 
     @Override
@@ -64,7 +64,7 @@ public class DatastreamIndexJob extends IndexJob {
 
     @Override
     protected void executeCreate(FedoraClient fedoraClient, Client client, ESLogger log) throws Exception {
-        client.prepareIndex(index(), indexType(), dsid())
+        client.prepareIndex(index(), indexType(), pid())
                 .setSource(buildIndexObject(fedoraClient))
                 .execute().actionGet();
     }
@@ -113,7 +113,7 @@ public class DatastreamIndexJob extends IndexJob {
             );
             parser.nextToken();
 
-            builder.field("_json");
+            builder.field("_fields");
             builder.copyCurrentStructure(parser);
 
         } else {
