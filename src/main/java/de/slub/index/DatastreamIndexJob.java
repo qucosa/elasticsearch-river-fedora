@@ -34,6 +34,7 @@ import java.net.URI;
 import java.util.concurrent.TimeUnit;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
+import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 
 public class DatastreamIndexJob extends IndexJob {
 
@@ -54,7 +55,10 @@ public class DatastreamIndexJob extends IndexJob {
 
     @Override
     protected java.util.List<IndexJob> executeDelete(FedoraClient fedoraClient, Client client, ESLogger log) {
-        client.prepareDelete(index(), indexType(), pid()).execute().actionGet();
+        client.prepareDeleteByQuery(index())
+                .setTypes(ES_TYPE_NAME, IndexJobProcessor.ES_ERROR_TYPE_NAME)
+                .setQuery(termQuery("_id", esid()))
+                .execute().actionGet();
         return null;
     }
 
@@ -66,7 +70,7 @@ public class DatastreamIndexJob extends IndexJob {
 
     @Override
     protected java.util.List<IndexJob> executeCreate(FedoraClient fedoraClient, Client client, ESLogger log) throws Exception {
-        client.prepareIndex(index(), indexType(), pid())
+        client.prepareIndex(index(), indexType(), esid())
                 .setSource(buildIndexObject(fedoraClient))
                 .execute().actionGet();
         return null;

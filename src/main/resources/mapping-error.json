@@ -1,0 +1,28 @@
+{
+    "_ttl": {
+        "enabled": true,
+        "default": "6w"
+    },
+    "properties": {
+        "PID": {
+            "type": "string",
+            "store": true,
+            "index": "not_analyzed"
+        },
+        "DSID": {
+            "type": "string",
+            "store": true,
+            "index": "not_analyzed"
+        },
+        "job": {
+            "type": "string",
+            "store": true,
+            "index": "not_analyzed"
+        },
+        "message": {
+            "type": "string",
+            "store": true,
+            "index": "not_analyzed"
+        }
+    }
+}

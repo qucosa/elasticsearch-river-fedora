@@ -26,7 +26,9 @@ import com.yourmediashelf.fedora.generated.management.DatastreamProfile;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
 
+import javax.management.QueryEval;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -57,7 +59,7 @@ public class ObjectIndexJob extends IndexJob {
     protected List<IndexJob> executeDelete(FedoraClient fedoraClient, Client client, ESLogger log) throws IOException {
         client.prepareDeleteByQuery(index())
                 .setTypes(ES_TYPE_NAME, DatastreamIndexJob.ES_TYPE_NAME, IndexJobProcessor.ES_ERROR_TYPE_NAME)
-                .setQuery(termQuery("_id", pid()))
+                .setQuery(termQuery("PID", pid()))
                 .execute().actionGet();
         return null;
     }
@@ -70,7 +72,7 @@ public class ObjectIndexJob extends IndexJob {
 
     @Override
     protected List<IndexJob> executeCreate(FedoraClient fedoraClient, Client client, ESLogger log) throws IOException, FedoraClientException {
-        client.prepareIndex(index(), indexType(), pid())
+        client.prepareIndex(index(), indexType(), esid())
                 .setSource(buildIndexObject(fedoraClient))
                 .execute().actionGet();
 

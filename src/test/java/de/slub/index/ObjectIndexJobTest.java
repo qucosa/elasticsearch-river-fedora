@@ -75,12 +75,31 @@ public class ObjectIndexJobTest {
     }
 
     @Test
+    @Ignore("Mocking doesn't work")
     public void deleteIndexJobRemovesDocumentFromIndex() throws Exception {
         ObjectIndexJob job1 = new ObjectIndexJob(CREATE, "test:1234");
         job1.index("idx1").execute(fedoraClient, esNode.client(), esLogger);
+
         ObjectIndexJob job2 = new ObjectIndexJob(DELETE, "test:1234");
         job2.index("idx1").execute(fedoraClient, esNode.client(), esLogger);
+
         GetResponse response = esNode.client().get(new GetRequest("idx1", ObjectIndexJob.ES_TYPE_NAME, "test:1234")).actionGet();
+        assertFalse(response.isExists());
+    }
+
+    @Test
+    @Ignore("Mocking doesn't work")
+    public void deletesDatastreamDocumentsFromIndex() throws Exception {
+        ObjectIndexJob job1 = new ObjectIndexJob(CREATE, "test:1234");
+        job1.index("idx1").execute(fedoraClient, esNode.client(), esLogger);
+
+        DatastreamIndexJob job2 = new DatastreamIndexJob(CREATE, "test:1234", "DS");
+        job2.index("idx1").execute(fedoraClient, esNode.client(), esLogger);
+
+        ObjectIndexJob job3 = new ObjectIndexJob(DELETE, "test:1234");
+        job3.index("idx1").execute(fedoraClient, esNode.client(), esLogger);
+
+        GetResponse response = esNode.client().get(new GetRequest("idx1", DatastreamIndexJob.ES_TYPE_NAME, "test:1234:DS")).actionGet();
         assertFalse(response.isExists());
     }
 

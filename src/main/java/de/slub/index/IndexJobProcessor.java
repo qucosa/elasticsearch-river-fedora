@@ -76,9 +76,11 @@ public class IndexJobProcessor implements Runnable {
             log.error("Error: " + ex.getMessage());
 
             try {
-                client.prepareIndex(indexName, ES_ERROR_TYPE_NAME, job.pid())
+                client.prepareIndex(indexName, ES_ERROR_TYPE_NAME, job.esid())
                         .setSource(
                                 jsonBuilder().startObject()
+                                        .field("PID", job.pid())
+                                        .field("DSID", job.dsid())
                                         .field("job", job.toString())
                                         .field("message", ex.getMessage())
                                         .endObject()

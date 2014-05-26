@@ -21,7 +21,6 @@ import de.slub.util.concurrent.DelayedQueueElement;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.logging.ESLogger;
 
-import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -112,6 +111,14 @@ public abstract class IndexJob extends DelayedQueueElement {
                 return executeDelete(fedoraClient, client, log);
             default:
                 return null;
+        }
+    }
+
+    public String esid() {
+        if (dsid().isEmpty()) {
+            return pid();
+        } else {
+            return pid() + ":" + dsid();
         }
     }
 
