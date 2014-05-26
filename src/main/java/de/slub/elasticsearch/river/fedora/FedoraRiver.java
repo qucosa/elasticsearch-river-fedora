@@ -115,9 +115,16 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
     }
 
     private void configure(RiverSettings settings) throws ConfigurationException {
-        indexName = XContentMapValues.nodeStringValue(
-                settings.settings().get("indexName"), DEFAULT_INDEX_NAME
-        );
+
+        if (settings.settings().containsKey("index")) {
+            Map<String, Object> indexSettings =
+                    XContentMapValues.nodeMapValue(settings.settings().get("index"), "index");
+            indexName = XContentMapValues.nodeStringValue(
+                    indexSettings.get("indexName"), DEFAULT_INDEX_NAME
+            );
+        } else {
+            indexName = DEFAULT_INDEX_NAME;
+        }
 
         if (settings.settings().containsKey("jms")) {
             Map<String, Object> jmsSettings =
