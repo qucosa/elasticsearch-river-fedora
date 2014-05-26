@@ -17,7 +17,7 @@
 package de.slub.index;
 
 import com.yourmediashelf.fedora.client.FedoraClient;
-import de.slub.util.concurrent.UniqueDelayQueue;
+import de.slub.util.concurrent.UniquePredicateDelayQueue;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
 import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
 import org.elasticsearch.action.get.GetResponse;
@@ -42,7 +42,7 @@ public class IndexJobProcessorTest {
 
     private static Node esNode;
     private IndexJobProcessor indexJobProcessor;
-    private UniqueDelayQueue<IndexJob> jobQueue;
+    private UniquePredicateDelayQueue<IndexJob> jobQueue;
     private Client esClient;
     private FedoraClient fedoraClient;
     private ESLogger esLogger;
@@ -91,7 +91,7 @@ public class IndexJobProcessorTest {
 
     @Before
     public void setup() {
-        jobQueue = new UniqueDelayQueue<>();
+        jobQueue = new UniquePredicateDelayQueue<>();
         esLogger = ESLoggerFactory.getRootLogger();
         esClient = esNode.client();
         fedoraClient = mock(FedoraClient.class);

@@ -32,11 +32,11 @@ public class UniqueDelayQueueTest {
 
     @Rule
     public Timeout globalTimeout = new Timeout(1000);
-    private UniqueDelayQueue<Delayed> queue;
+    private UniquePredicateDelayQueue<Delayed> queue;
 
     @Before
     public void setUp() {
-        queue = new UniqueDelayQueue<>();
+        queue = new UniquePredicateDelayQueue<>();
     }
 
     @After

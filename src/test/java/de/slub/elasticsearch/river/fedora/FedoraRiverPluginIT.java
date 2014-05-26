@@ -59,11 +59,13 @@ public class FedoraRiverPluginIT {
     @BeforeClass
     public static void setupEsNode() throws InterruptedException, IOException {
         node = NodeBuilder.nodeBuilder().settings(ImmutableSettings.settingsBuilder()
-                .put("gateway.indexType", "local")
+                .put("gateway.type", "none")
                 .put("index.store.type", "memory")
                 .put("index.store.fs.memory.enabled", true)
                 .put("path.data", "target/es/data")
-                .put("path.logs", "target/es/logs"))
+                .put("path.logs", "target/es/logs")
+                .put("index.number_of_shards", "1")
+                .put("index.number_of_replicas", "0"))
                 .local(true).node();
         node.client().admin().cluster().prepareHealth().setWaitForYellowStatus().execute();
     }
@@ -80,13 +82,19 @@ public class FedoraRiverPluginIT {
         node.client().prepareIndex("_river", "fr1", "_meta").setSource(
                 jsonBuilder().startObject()
                         .field("type", "fedora-river")
-                        .field("indexName", "fedora")
+                        .startObject("index")
+                            .field("name", "fedora")
+                            .field("exclude_datastreams").startArray().value("DC").value("RELS-EXT").endArray()
+//                            .field("exclude_datastreams", "DC")
+                        .endObject()
                         .startObject("jms")
-                        .field("brokerUrl", "tcp://" + FEDORA_HOST + ":61616").endObject()
+                            .field("brokerUrl", "tcp://" + FEDORA_HOST + ":61616")
+                        .endObject()
                         .startObject("fedora")
-                        .field("url", "http://" + FEDORA_HOST + ":8080/fedora")
-                        .field("username", "fedoraAdmin")
-                        .field("password", "fedoraAdmin").endObject()
+                            .field("url", "http://" + FEDORA_HOST + ":8080/fedora")
+                            .field("username", "fedoraAdmin")
+                            .field("password", "fedoraAdmin")
+                        .endObject()
                         .endObject()
         ).execute().actionGet();
         node.client().admin().indices().refresh(

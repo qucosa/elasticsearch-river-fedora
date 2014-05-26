@@ -22,11 +22,8 @@ import com.yourmediashelf.fedora.client.request.DescribeRepository;
 import com.yourmediashelf.fedora.client.response.DescribeRepositoryResponse;
 import com.yourmediashelf.fedora.generated.access.FedoraRepository;
 import de.slub.fedora.jms.APIMConsumer;
-import de.slub.index.DatastreamIndexJob;
-import de.slub.index.IndexJob;
-import de.slub.index.IndexJobProcessor;
-import de.slub.index.ObjectIndexJob;
-import de.slub.util.concurrent.UniqueDelayQueue;
+import de.slub.index.*;
+import de.slub.util.concurrent.UniquePredicateDelayQueue;
 import org.apache.activemq.ConfigurationException;
 import org.apache.commons.io.IOUtils;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
@@ -45,6 +42,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 public class FedoraRiver extends AbstractRiverComponent implements River {
@@ -63,6 +63,7 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
     private String username;
     private String password;
     private String indexName;
+    private List<String> excludeDatastreams;
 
     @Inject
     protected FedoraRiver(RiverName riverName, RiverSettings settings, Client client) throws Exception {
@@ -71,7 +72,8 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
 
         configure(settings);
 
-        UniqueDelayQueue<IndexJob> indexJobQueue = new UniqueDelayQueue<>();
+        UniquePredicateDelayQueue<IndexJob> indexJobQueue = new UniquePredicateDelayQueue<>(
+                new ExcludeDatastreamPredicate(excludeDatastreams));
 
         setupApimConsumerThread(settings, indexJobQueue);
         setupFedoraClient();
@@ -115,13 +117,23 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
     }
 
     private void configure(RiverSettings settings) throws ConfigurationException {
-
         if (settings.settings().containsKey("index")) {
             Map<String, Object> indexSettings =
                     XContentMapValues.nodeMapValue(settings.settings().get("index"), "index");
+
             indexName = XContentMapValues.nodeStringValue(
-                    indexSettings.get("indexName"), DEFAULT_INDEX_NAME
-            );
+                    indexSettings.get("indexName"), DEFAULT_INDEX_NAME);
+
+            excludeDatastreams = new ArrayList<>();
+            if (indexSettings.containsKey("exclude_datastreams")) {
+                Object excludeDatastreamParam = indexSettings.get("exclude_datastreams");
+                if (excludeDatastreamParam instanceof Collection) {
+                    excludeDatastreams.addAll((Collection<? extends String>) excludeDatastreamParam);
+                } else {
+                    excludeDatastreams.add(String.valueOf(excludeDatastreamParam));
+                }
+            }
+
         } else {
             indexName = DEFAULT_INDEX_NAME;
         }
@@ -152,7 +164,7 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
         }
     }
 
-    private void setupIndexJobProcessorThread(RiverSettings settings, Client client, UniqueDelayQueue<IndexJob> indexJobQueue) {
+    private void setupIndexJobProcessorThread(RiverSettings settings, Client client, UniquePredicateDelayQueue<IndexJob> indexJobQueue) {
         indexJobProcessor = new IndexJobProcessor(
                 indexJobQueue,
                 indexName,
@@ -165,7 +177,7 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
                 "fedora-river-indexJobProcessor").newThread(indexJobProcessor);
     }
 
-    private void setupApimConsumerThread(RiverSettings settings, UniqueDelayQueue<IndexJob> indexJobQueue) throws URISyntaxException {
+    private void setupApimConsumerThread(RiverSettings settings, UniquePredicateDelayQueue<IndexJob> indexJobQueue) throws URISyntaxException {
         apimConsumer = new APIMConsumer(
                 new URI(brokerUrl),
                 messageSelector,

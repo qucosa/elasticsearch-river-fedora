@@ -26,9 +26,7 @@ import com.yourmediashelf.fedora.generated.management.DatastreamProfile;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
 
-import javax.management.QueryEval;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;

@@ -14,19 +14,29 @@
  * limitations under the License.
  */
 
-package de.slub.util.concurrent;
+package de.slub.index;
 
-import java.util.concurrent.DelayQueue;
-import java.util.concurrent.Delayed;
+import de.slub.util.Predicate;
 
-public class UniqueDelayQueue<T extends Delayed> extends DelayQueue<T> {
+import java.util.List;
 
-    @Override
-    public boolean offer(T e) {
-        if (contains(e)) {
-            remove(e);
-        }
-        return super.offer(e);
+public class ExcludeDatastreamPredicate implements Predicate<IndexJob> {
+
+    private final List<String> excludeDatastreams;
+
+    public ExcludeDatastreamPredicate(List<String> excludeDatastreams) {
+        this.excludeDatastreams = excludeDatastreams;
     }
 
+    @Override
+    public boolean evaluate(IndexJob job) {
+        if (!job.dsid().isEmpty()) {
+            for (String excluded : excludeDatastreams) {
+                if (job.dsid().equals(excluded)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
 }
