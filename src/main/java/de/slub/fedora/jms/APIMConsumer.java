@@ -75,10 +75,13 @@ public class APIMConsumer implements Runnable {
                     log.debug("received:\n" + ((TextMessage) msg).getText());
                     IndexJob idxJob = map(msg);
                     if (idxJob != null) {
-                        indexJobQueue.add(idxJob);
-                        log.debug("Index job created: " + idxJob);
+                        if (indexJobQueue.add(idxJob)) {
+                            log.debug("Index job scheduled: " + idxJob);
+                        } else {
+                            log.debug("No index job scheduled (PID/DSID doesn't match or job is scheduled already).");
+                        }
                     } else {
-                        log.debug("No index job created (no mapping applies)");
+                        log.debug("No index job scheduled (no mapping for JMS message)");
                     }
                 } catch (Exception e) {
                     log.error("Failed creating index job: " + e.getCause().getMessage());
