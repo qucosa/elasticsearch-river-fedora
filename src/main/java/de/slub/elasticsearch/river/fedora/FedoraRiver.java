@@ -62,7 +62,8 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
     private String fedoraUrl;
     private String username;
     private String password;
-    private String indexName;
+    private String indexName = DEFAULT_INDEX_NAME;
+    private String pidMatch = "";
     private List<String> excludeDatastreams;
 
     @Inject
@@ -72,8 +73,15 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
 
         configure(settings);
 
-        UniquePredicateDelayQueue<IndexJob> indexJobQueue = new UniquePredicateDelayQueue<>(
-                new ExcludeDatastreamPredicate(excludeDatastreams));
+        UniquePredicateDelayQueue<IndexJob> indexJobQueue = new UniquePredicateDelayQueue<>();
+
+        if (!pidMatch.isEmpty()) {
+            indexJobQueue.addPredicate(new MatchPidPredicate(pidMatch));
+        }
+
+        if (!excludeDatastreams.isEmpty()) {
+            indexJobQueue.addPredicate(new ExcludeDatastreamPredicate(excludeDatastreams));
+        }
 
         setupApimConsumerThread(settings, indexJobQueue);
         setupFedoraClient();
@@ -124,6 +132,9 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
             indexName = XContentMapValues.nodeStringValue(
                     indexSettings.get("indexName"), DEFAULT_INDEX_NAME);
 
+            pidMatch = XContentMapValues.nodeStringValue(
+                    indexSettings.get("pid_match"), "");
+
             excludeDatastreams = new ArrayList<>();
             if (indexSettings.containsKey("exclude_datastreams")) {
                 Object excludeDatastreamParam = indexSettings.get("exclude_datastreams");
@@ -133,9 +144,6 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
                     excludeDatastreams.add(String.valueOf(excludeDatastreamParam));
                 }
             }
-
-        } else {
-            indexName = DEFAULT_INDEX_NAME;
         }
 
         if (settings.settings().containsKey("jms")) {

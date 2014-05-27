@@ -2,7 +2,8 @@
     "type": "fedora-river",
     "index": {
         "name": "fedora",
-        "exclude_datastreams": ["DC", "RELS-EXT", "RELS-INT", "POLICY"]
+        "exclude_datastreams": ["DC", "RELS-EXT", "RELS-INT", "POLICY"],
+        "pid_match": "^changeme:\\d+$"
     },
     "jms": {
         "brokerUrl": "failover:(tcp://localhost:61616)",

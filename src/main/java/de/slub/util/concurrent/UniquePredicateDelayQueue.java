@@ -18,24 +18,22 @@ package de.slub.util.concurrent;
 
 import de.slub.util.Predicate;
 
+import java.util.LinkedList;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
 
 public class UniquePredicateDelayQueue<T extends Delayed> extends DelayQueue<T> {
 
-    private final Predicate<T> predicate;
+    private LinkedList<Predicate<T>> predicates = new LinkedList<>();
 
-    public UniquePredicateDelayQueue() {
-        this(null);
-    }
-
-    public UniquePredicateDelayQueue(Predicate<T> predicate) {
-        this.predicate = predicate;
+    public UniquePredicateDelayQueue addPredicate(Predicate<T> predicate) {
+        predicates.add(predicate);
+        return this;
     }
 
     @Override
     public boolean offer(T e) {
-        if ((predicate == null) || (predicate.evaluate(e))) {
+        if (predicates.isEmpty() || evaluatePredicates(e)) {
             if (contains(e)) {
                 remove(e);
             }
@@ -43,6 +41,13 @@ public class UniquePredicateDelayQueue<T extends Delayed> extends DelayQueue<T> 
         } else {
             return false;
         }
+    }
+
+    private boolean evaluatePredicates(T e) {
+        for (Predicate<T> p : predicates) {
+            if (!p.evaluate(e)) return false;
+        }
+        return true;
     }
 
 }

@@ -32,7 +32,8 @@ public class UniquePredicateDelayQueueTest {
 
     @Test
     public void acceptsElementsAccordingToPredicate() {
-        UniquePredicateDelayQueue<DelayedQueueElement> queue = new UniquePredicateDelayQueue<>(
+        UniquePredicateDelayQueue<DelayedQueueElement> queue = new UniquePredicateDelayQueue<>();
+        queue.addPredicate(
                 new Predicate<DelayedQueueElement>() {
                     @Override
                     public boolean evaluate(DelayedQueueElement o) {
@@ -45,7 +46,8 @@ public class UniquePredicateDelayQueueTest {
 
     @Test
     public void rejectsElementsAccordingToPredictate() {
-        UniquePredicateDelayQueue<DelayedQueueElement> queue = new UniquePredicateDelayQueue<>(
+        UniquePredicateDelayQueue<DelayedQueueElement> queue = new UniquePredicateDelayQueue<>();
+        queue.addPredicate(
                 new Predicate<DelayedQueueElement>() {
                     @Override
                     public boolean evaluate(DelayedQueueElement o) {
