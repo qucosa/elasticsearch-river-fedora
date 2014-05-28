@@ -65,6 +65,8 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
     private String indexName = DEFAULT_INDEX_NAME;
     private String pidMatch = "";
     private List<String> excludeDatastreams;
+    private String sdefPid;
+    private String method;
 
     @Inject
     protected FedoraRiver(RiverName riverName, RiverSettings settings, Client client) throws Exception {
@@ -144,6 +146,14 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
                     excludeDatastreams.add(String.valueOf(excludeDatastreamParam));
                 }
             }
+
+            if (indexSettings.containsKey("dissemination")) {
+                Map<String, Object> disseminationSettings =
+                        XContentMapValues.nodeMapValue(indexSettings.get("dissemination"), "dissemination");
+                sdefPid = XContentMapValues.nodeStringValue(disseminationSettings.get("sdef_pid"), "");
+                method = XContentMapValues.nodeStringValue(disseminationSettings.get("method"), "");
+            }
+
         }
 
         if (settings.settings().containsKey("jms")) {
@@ -178,7 +188,9 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
                 indexName,
                 client,
                 fedoraClient,
-                logger
+                logger,
+                sdefPid,
+                method
         );
         indexJobProcessorThread = EsExecutors.daemonThreadFactory(
                 settings.globalSettings(),

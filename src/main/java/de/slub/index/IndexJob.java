@@ -32,6 +32,8 @@ public abstract class IndexJob extends DelayedQueueElement {
     private final int hashCode;
     private String index;
     private String indexType;
+    private String sdefPid;
+    private String method;
 
     public IndexJob(Type type, String pid) {
         this(type, pid, "");
@@ -127,6 +129,24 @@ public abstract class IndexJob extends DelayedQueueElement {
     protected abstract List<IndexJob> executeUpdate(FedoraClient fedoraClient, Client client, ESLogger log) throws Exception;
 
     protected abstract List<IndexJob> executeCreate(FedoraClient fedoraClient, Client client, ESLogger log) throws Exception;
+
+    public IndexJob sdefPid(String sdefPid) {
+        this.sdefPid = sdefPid;
+        return this;
+    }
+
+    public String sdefPid() {
+        return sdefPid;
+    }
+
+    public IndexJob method(String method) {
+        this.method = method;
+        return this;
+    }
+
+    public String method() {
+        return method;
+    }
 
     public enum Type {
         CREATE,

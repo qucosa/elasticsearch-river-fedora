@@ -34,15 +34,24 @@ public class IndexJobProcessor implements Runnable {
     private final ESLogger log;
     private final FedoraClient fedoraClient;
     private final String indexName;
+    private final String sdefPid;
+    private final String method;
     private boolean terminated = false;
 
     public IndexJobProcessor(BlockingQueue<IndexJob> indexJobQueue, String indexName, Client esClient,
-                             FedoraClient fedoraClient, ESLogger logger) {
+                             FedoraClient fedoraClient, ESLogger logger, String sdefPid, String method) {
         this.client = esClient;
         this.queue = indexJobQueue;
         this.indexName = indexName;
         this.fedoraClient = fedoraClient;
         this.log = logger;
+        this.sdefPid = sdefPid;
+        this.method = method;
+    }
+
+    public IndexJobProcessor(BlockingQueue<IndexJob> indexJobQueue, String indexName, Client esClient,
+                             FedoraClient fedoraClient, ESLogger logger) {
+        this(indexJobQueue, indexName, esClient, fedoraClient, logger, "", "");
     }
 
     public void terminate() {
@@ -68,6 +77,8 @@ public class IndexJobProcessor implements Runnable {
         try {
             List<IndexJob> newJobs = job
                     .index(indexName)
+                    .sdefPid(sdefPid)
+                    .method(method)
                     .execute(fedoraClient, client, log);
 
             if (newJobs != null) for (IndexJob indexJob : newJobs) queue.add(indexJob);

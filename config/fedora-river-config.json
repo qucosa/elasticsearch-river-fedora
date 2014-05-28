@@ -3,7 +3,11 @@
     "index": {
         "name": "fedora",
         "exclude_datastreams": ["DC", "RELS-EXT", "RELS-INT", "POLICY"],
-        "pid_match": "^changeme:\\d+$"
+        "pid_match": "^changeme:\\d+$",
+        "dissemination": {
+            "sdef_pid": "changeme:SDef",
+            "method": "getIndexDocument"
+        }
     },
     "jms": {
         "brokerUrl": "failover:(tcp://localhost:61616)",

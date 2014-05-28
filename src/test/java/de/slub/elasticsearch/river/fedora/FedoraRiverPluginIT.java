@@ -39,21 +39,6 @@ import static org.junit.Assert.assertTrue;
 public class FedoraRiverPluginIT {
 
     public static final String FEDORA_HOST = "localhost";
-
-    @Test
-    public void riverStarts() throws InterruptedException {
-        GetResponse response = node.client().get(new GetRequest("_river", "fr1", "_status")).actionGet();
-        assertFalse(response.getSourceAsMap().containsKey("error"));
-    }
-
-    @Test
-    public void riverInitializesObjectIndex() {
-        IndicesExistsResponse response = node.client().admin().indices().exists(
-                new IndicesExistsRequest("fedora")
-        ).actionGet();
-        assertTrue(response.isExists());
-    }
-
     private static Node node;
 
     @BeforeClass
@@ -76,6 +61,19 @@ public class FedoraRiverPluginIT {
         node.stop();
     }
 
+    @Test
+    public void riverStarts() throws InterruptedException {
+        GetResponse response = node.client().get(new GetRequest("_river", "fr1", "_status")).actionGet();
+        assertFalse(response.getSourceAsMap().containsKey("error"));
+    }
+
+    @Test
+    public void riverInitializesObjectIndex() {
+        IndicesExistsResponse response = node.client().admin().indices().exists(
+                new IndicesExistsRequest("fedora")
+        ).actionGet();
+        assertTrue(response.isExists());
+    }
 
     @Before
     public void setupRiver() throws IOException, InterruptedException {
@@ -83,17 +81,17 @@ public class FedoraRiverPluginIT {
                 jsonBuilder().startObject()
                         .field("type", "fedora-river")
                         .startObject("index")
-                            .field("name", "fedora")
-                            .field("exclude_datastreams").startArray().value("DC").value("RELS-EXT").endArray()
+                        .field("name", "fedora")
+                        .field("exclude_datastreams").startArray().value("DC").value("RELS-EXT").endArray()
 //                            .field("exclude_datastreams", "DC")
                         .endObject()
                         .startObject("jms")
-                            .field("brokerUrl", "tcp://" + FEDORA_HOST + ":61616")
+                        .field("brokerUrl", "tcp://" + FEDORA_HOST + ":61616")
                         .endObject()
                         .startObject("fedora")
-                            .field("url", "http://" + FEDORA_HOST + ":8080/fedora")
-                            .field("username", "fedoraAdmin")
-                            .field("password", "fedoraAdmin")
+                        .field("url", "http://" + FEDORA_HOST + ":8080/fedora")
+                        .field("username", "fedoraAdmin")
+                        .field("password", "fedoraAdmin")
                         .endObject()
                         .endObject()
         ).execute().actionGet();
