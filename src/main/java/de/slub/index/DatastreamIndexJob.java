@@ -18,18 +18,12 @@ package de.slub.index;
 
 import com.yourmediashelf.fedora.client.FedoraClient;
 import com.yourmediashelf.fedora.client.request.GetDatastream;
-import com.yourmediashelf.fedora.client.request.GetDatastreamDissemination;
 import com.yourmediashelf.fedora.client.response.GetDatastreamResponse;
 import com.yourmediashelf.fedora.generated.management.DatastreamProfile;
-import de.slub.util.xslt.JsonTransformer;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentFactory;
-import org.elasticsearch.common.xcontent.XContentParser;
-import org.elasticsearch.common.xcontent.XContentType;
 
-import java.io.InputStream;
 import java.net.URI;
 import java.util.concurrent.TimeUnit;
 
@@ -107,26 +101,8 @@ public class DatastreamIndexJob extends IndexJob {
         );
         builder.field("_uri", disseminationURI.toASCIIString());
 
-        if (profile.getDsMIME().endsWith("/xml")) {
-            // map to JSON
-
-            InputStream disseminationInputStream = fedoraClient.execute(new GetDatastreamDissemination(
-                    profile.getPid(), profile.getDsID()
-            )).getEntityInputStream();
-
-            JsonTransformer jsonTransformer = JsonTransformer.getInstance();
-            XContentParser parser = XContentFactory.xContent(XContentType.JSON).createParser(
-                    jsonTransformer.toJson(disseminationInputStream)
-            );
-            parser.nextToken();
-
-            builder.field("_fields");
-            builder.copyCurrentStructure(parser);
-
-        } else {
-            // try to extract full text
-            builder.field("_content", "Crash Boom Bang!");
-        }
+        // TODO Use Tika to extrcat full text and meta data
+        builder.field("_content", "Crash Boom Bang!");
 
         return builder;
     }

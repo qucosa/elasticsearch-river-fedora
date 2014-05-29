@@ -50,6 +50,7 @@ import java.util.Map;
 public class FedoraRiver extends AbstractRiverComponent implements River {
 
     private static final String DEFAULT_INDEX_NAME = "fedora";
+    private String indexName = DEFAULT_INDEX_NAME;
     private final Client esClient;
     private APIMConsumer apimConsumer;
     private IndexJobProcessor indexJobProcessor;
@@ -62,7 +63,6 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
     private String fedoraUrl;
     private String username;
     private String password;
-    private String indexName = DEFAULT_INDEX_NAME;
     private String pidMatch = "";
     private List<String> excludeDatastreams;
     private String sdefPid;
