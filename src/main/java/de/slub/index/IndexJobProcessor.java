@@ -20,6 +20,7 @@ import com.yourmediashelf.fedora.client.FedoraClient;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.logging.ESLogger;
 
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -94,6 +95,7 @@ public class IndexJobProcessor implements Runnable {
                                         .field("DSID", job.dsid())
                                         .field("job", job.toString())
                                         .field("message", ex.getMessage())
+                                        .field("timestamp", new Date())
                                         .endObject()
                         ).execute().actionGet();
             } catch (Exception e) {

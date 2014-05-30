@@ -79,14 +79,15 @@ public class IndexJobProcessorTest {
         jobQueue.add(job);
 
         executorService.execute(indexJobProcessor);
-        Thread.sleep(1000);
         indexJobProcessor.terminate();
+        Thread.sleep(2000);
 
         esClient.admin().indices().refresh(new RefreshRequest("testindex")).actionGet();
 
         GetResponse response = esClient.prepareGet("testindex", "error", "test:1").execute().actionGet();
         assertTrue(response.isExists());
         assertEquals("Test", response.getSourceAsMap().get("message"));
+        assertTrue("Timestamp missing", response.getSourceAsMap().containsKey("timestamp"));
     }
 
     @Before
