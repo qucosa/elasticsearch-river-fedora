@@ -18,12 +18,15 @@ package de.slub.index;
 
 import com.yourmediashelf.fedora.client.FedoraClient;
 import com.yourmediashelf.fedora.client.request.GetDatastream;
+import com.yourmediashelf.fedora.client.request.GetDatastreamDissemination;
+import com.yourmediashelf.fedora.client.response.FedoraResponse;
 import com.yourmediashelf.fedora.client.response.GetDatastreamResponse;
 import com.yourmediashelf.fedora.generated.management.DatastreamProfile;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 
+import java.io.InputStream;
 import java.net.URI;
 import java.util.concurrent.TimeUnit;
 
@@ -86,25 +89,37 @@ public class DatastreamIndexJob extends IndexJob {
                 .field("SIZE", profile.getDsSize())
                 .field("VERSIONABLE", (profile.getDsVersionable().equals("true")))
                 .field("CHECKSUM_TYPE", profile.getDsChecksumType())
-                .field("CHECKSUM", profile.getDsChecksum())
-                .startObject("CONTENT");
-        buildDatastreamIndexObject(jb, profile, fedoraClient).endObject();
+                .field("CHECKSUM", profile.getDsChecksum());
+        indexDatastreamContent(fedoraClient, profile, jb);
         jb.endObject();
         return jb;
     }
 
-    private XContentBuilder buildDatastreamIndexObject(XContentBuilder builder, DatastreamProfile profile, FedoraClient fedoraClient) throws Exception {
-        URI disseminationURI = new URI(
+    private void indexDatastreamContent(FedoraClient fedoraClient, DatastreamProfile profile, XContentBuilder jb) throws Exception {
+        jb.startObject("CONTENT");
+        URI contentURI = new URI(
                 String.format("objects/%s/datastreams/%s/content",
                         profile.getPid(),
                         profile.getDsID())
         );
-        builder.field("_uri", disseminationURI.toASCIIString());
+        jb.field("_uri", contentURI.toASCIIString());
+        FedoraResponse dsResponse = fedoraClient.execute(new GetDatastreamDissemination(
+                profile.getPid(), profile.getDsID()
+        ));
 
-        // TODO Use Tika to extrcat full text and meta data
-        builder.field("_content", "Crash Boom Bang!");
+        if (dsResponse.getStatus() != 200) {
+            throw new Exception("Couldn't get datastream content for indexing. Fedora server status: " + dsResponse.getStatus());
+        }
 
-        return builder;
+        InputStream contentInputStream = dsResponse.getEntityInputStream();
+        try {
+            TikaContentIndexer tikaContentIndexer = new TikaContentIndexer();
+            tikaContentIndexer.index(jb, contentInputStream);
+        } finally {
+            contentInputStream.close();
+        }
+
+        jb.endObject();
     }
 
 }
