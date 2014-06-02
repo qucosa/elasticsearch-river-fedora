@@ -16,6 +16,7 @@
 
 package de.slub.elasticsearch.river.fedora;
 
+import org.apache.commons.io.IOUtils;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsRequest;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
@@ -31,7 +32,6 @@ import org.junit.*;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
-import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -39,6 +39,7 @@ import static org.junit.Assert.assertTrue;
 public class FedoraRiverPluginIT {
 
     public static final String FEDORA_HOST = "localhost";
+    public static final boolean WHATEVER = true;
     private static Node node;
 
     @BeforeClass
@@ -77,24 +78,10 @@ public class FedoraRiverPluginIT {
 
     @Before
     public void setupRiver() throws IOException, InterruptedException {
-        node.client().prepareIndex("_river", "fr1", "_meta").setSource(
-                jsonBuilder().startObject()
-                        .field("type", "fedora-river")
-                        .startObject("index")
-                        .field("name", "fedora")
-                        .field("exclude_datastreams").startArray().value("DC").value("RELS-EXT").endArray()
-//                            .field("exclude_datastreams", "DC")
-                        .endObject()
-                        .startObject("jms")
-                        .field("brokerUrl", "tcp://" + FEDORA_HOST + ":61616")
-                        .endObject()
-                        .startObject("fedora")
-                        .field("url", "http://" + FEDORA_HOST + ":8080/fedora")
-                        .field("username", "fedoraAdmin")
-                        .field("password", "fedoraAdmin")
-                        .endObject()
-                        .endObject()
-        ).execute().actionGet();
+        node.client().prepareIndex("_river", "fr1", "_meta")
+                .setSource(
+                        IOUtils.toString(this.getClass().getResourceAsStream("/config/fedora-river-config.json")))
+                .execute().actionGet();
         node.client().admin().indices().refresh(
                 new RefreshRequest()
         );

@@ -42,10 +42,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class FedoraRiver extends AbstractRiverComponent implements River {
 
@@ -67,6 +64,7 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
     private List<String> excludeDatastreams;
     private String sdefPid;
     private String method;
+    private Map<String, Object> disseminationContentMapping;
 
     @Inject
     protected FedoraRiver(RiverName riverName, RiverSettings settings, Client client) throws Exception {
@@ -152,6 +150,46 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
                         XContentMapValues.nodeMapValue(indexSettings.get("dissemination"), "dissemination");
                 sdefPid = XContentMapValues.nodeStringValue(disseminationSettings.get("sdef_pid"), "");
                 method = XContentMapValues.nodeStringValue(disseminationSettings.get("method"), "");
+
+                if (disseminationSettings.containsKey("properties")) {
+                    final Map<String, Object> mappingProperties =
+                            XContentMapValues.nodeMapValue(disseminationSettings.get("properties"), "properties");
+
+                    /*
+                        {
+                          "properties": {
+                            "_dissemination": {
+                              "properties": {
+                                "_content": {
+                                  "properties": {
+                                    "PUB_TYPE": {
+                                      "type": "string",
+                                      "store": true,
+                                      "index": "not_analyzed"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                     */
+
+                    HashMap<String, Object> _content = new HashMap<>();
+                    _content.put("properties", mappingProperties);
+
+                    HashMap<String, Object> properties = new HashMap<>();
+                    properties.put("_content", _content);
+
+                    HashMap<String, Object> properties2 = new HashMap<>();
+                    properties2.put("properties", properties);
+
+                    HashMap<String, Object> _dissemination = new HashMap<>();
+                    _dissemination.put("_dissemination", properties2);
+
+                    disseminationContentMapping = new HashMap<>();
+                    disseminationContentMapping.put("properties", _dissemination);
+                }
             }
 
         }
@@ -221,11 +259,27 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
 
         prepareMapping(esClient, indexName, ObjectIndexJob.ES_TYPE_NAME,
                 this.getClass().getResourceAsStream("/mapping-object.json"));
+        prepareMapping(esClient, indexName, ObjectIndexJob.ES_TYPE_NAME,
+                disseminationContentMapping);
+
         prepareMapping(esClient, indexName, DatastreamIndexJob.ES_TYPE_NAME,
                 this.getClass().getResourceAsStream("/mapping-datastream.json"));
         prepareMapping(esClient, indexName, IndexJobProcessor.ES_ERROR_TYPE_NAME,
                 this.getClass().getResourceAsStream("/mapping-error.json"));
 
+    }
+
+    private void prepareMapping(Client esClient, String indexName, String esTypeName, Map<String, Object> properties) {
+        try {
+            esClient.admin().indices().preparePutMapping(indexName)
+                    .setType(esTypeName)
+                    .setSource(properties)
+                    .execute()
+                    .actionGet();
+        } catch (Exception ex) {
+            logger.error("Could not initialize mapping for {}/{}. Reason: {}",
+                    indexName, esTypeName, ex.getMessage());
+        }
     }
 
     private void prepareMapping(Client esClient, String indexName, String type, InputStream mapping) {
