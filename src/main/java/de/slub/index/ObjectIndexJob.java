@@ -116,6 +116,10 @@ public class ObjectIndexJob extends IndexJob {
     private void addDisseminationResult(XContentBuilder builder, FedoraClient fedoraClient)
             throws Exception {
         try {
+            if (sdefPid() == null || method() == null || sdefPid().isEmpty() || method().isEmpty()) {
+                return;
+            }
+
             FedoraResponse disseminationResult =
                     fedoraClient.execute(new GetDissemination(pid(), sdefPid(), method()));
 
