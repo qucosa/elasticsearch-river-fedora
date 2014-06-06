@@ -22,11 +22,14 @@ import com.yourmediashelf.fedora.client.request.GetDatastreamDissemination;
 import com.yourmediashelf.fedora.client.response.FedoraResponse;
 import com.yourmediashelf.fedora.client.response.GetDatastreamResponse;
 import com.yourmediashelf.fedora.generated.management.DatastreamProfile;
+import org.apache.commons.io.IOUtils;
+import org.apache.tika.parser.ParsingReader;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 
 import java.io.InputStream;
+import java.io.Reader;
 import java.net.URI;
 import java.util.concurrent.TimeUnit;
 
@@ -113,8 +116,8 @@ public class DatastreamIndexJob extends IndexJob {
 
         InputStream contentInputStream = dsResponse.getEntityInputStream();
         try {
-            TikaContentIndexer tikaContentIndexer = new TikaContentIndexer();
-            tikaContentIndexer.index(jb, contentInputStream);
+            Reader reader = new ParsingReader(contentInputStream);
+            jb.field("_text", IOUtils.toString(reader));
         } finally {
             contentInputStream.close();
         }
