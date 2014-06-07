@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<datastreamProfile xmlns="http://www.fedora.info/definitions/1/0/management/"
-                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<datastreamProfile xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xmlns="http://www.fedora.info/definitions/1/0/management/"
                    xsi:schemaLocation="http://www.fedora.info/definitions/1/0/management/ http://www.fedora.info/definitions/1/0/datastreamProfile.xsd"
                    pid="fedora-system:ServiceDeployment-3.0" dsID="DC">
     <dsLabel>Dublin Core Record for this object</dsLabel>

@@ -5,25 +5,25 @@
             "store": true,
             "index": "not_analyzed"
         },
-        "STATE" : {
+        "STATE": {
             "type": "string",
             "store": true,
             "index": "not_analyzed"
         },
-        "LABEL" : {
+        "LABEL": {
             "type": "string",
             "store": true
         },
-        "OWNER_ID" : {
+        "OWNER_ID": {
             "type": "string",
             "store": true,
             "index": "not_analyzed"
         },
-        "CREATED_DATE" : {
+        "CREATED_DATE": {
             "type": "date",
             "store": true
         },
-        "LAST_MODIFIED_DATE" : {
+        "LAST_MODIFIED_DATE": {
             "type": "date",
             "store": true
         }

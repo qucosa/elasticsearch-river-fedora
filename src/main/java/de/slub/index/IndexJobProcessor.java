@@ -20,6 +20,7 @@ import com.yourmediashelf.fedora.client.FedoraClient;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.logging.ESLogger;
 
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -87,6 +88,9 @@ public class IndexJobProcessor implements Runnable {
         } catch (Exception ex) {
             log.error("Error: " + ex.getMessage());
 
+            Calendar calendar = Calendar.getInstance();
+            Date timestamp = calendar.getTime();
+
             try {
                 client.prepareIndex(indexName, ES_ERROR_TYPE_NAME, job.esid())
                         .setSource(
@@ -95,7 +99,7 @@ public class IndexJobProcessor implements Runnable {
                                         .field("DSID", job.dsid())
                                         .field("job", job.toString())
                                         .field("message", ex.getMessage())
-                                        .field("timestamp", new Date())
+                                        .field("timestamp", timestamp)
                                         .endObject()
                         ).execute().actionGet();
             } catch (Exception e) {

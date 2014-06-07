@@ -25,5 +25,9 @@
         "url": "http://localhost:8080/fedora",
         "username": "fedoraAdmin",
         "password": "fedoraAdmin"
+    },
+    "oai": {
+        "url": "http://localhost:8080/fedora/oai",
+        "poll_interval": "1m"
     }
 }

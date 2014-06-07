@@ -22,6 +22,8 @@ import com.yourmediashelf.fedora.client.request.DescribeRepository;
 import com.yourmediashelf.fedora.client.response.DescribeRepositoryResponse;
 import com.yourmediashelf.fedora.generated.access.FedoraRepository;
 import de.slub.fedora.jms.APIMConsumer;
+import de.slub.fedora.oai.OaiHarvester;
+import de.slub.fedora.oai.OaiHarvesterBuilder;
 import de.slub.index.*;
 import de.slub.util.concurrent.UniquePredicateDelayQueue;
 import org.apache.activemq.ConfigurationException;
@@ -48,6 +50,7 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
 
     private static final String DEFAULT_INDEX_NAME = "fedora";
     private String indexName = DEFAULT_INDEX_NAME;
+    private final UniquePredicateDelayQueue<IndexJob> indexJobQueue;
     private final Client esClient;
     private APIMConsumer apimConsumer;
     private IndexJobProcessor indexJobProcessor;
@@ -65,6 +68,9 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
     private String sdefPid;
     private String method;
     private Map<String, Object> disseminationContentMapping;
+    private Map<String, Object> oaiSettings;
+    private OaiHarvester oaiHarvester;
+    private Thread oaiHarvesterThread;
 
     @Inject
     protected FedoraRiver(RiverName riverName, RiverSettings settings, Client client) throws Exception {
@@ -73,7 +79,7 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
 
         configure(settings);
 
-        UniquePredicateDelayQueue<IndexJob> indexJobQueue = new UniquePredicateDelayQueue<>();
+        indexJobQueue = new UniquePredicateDelayQueue<>();
 
         if (!pidMatch.isEmpty()) {
             indexJobQueue.addPredicate(new MatchPidPredicate(pidMatch));
@@ -83,17 +89,32 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
             indexJobQueue.addPredicate(new ExcludeDatastreamPredicate(excludeDatastreams));
         }
 
-        setupApimConsumerThread(settings, indexJobQueue);
+        setupApimConsumerThread(settings);
+        setupOaiHarvesterThread();
         setupFedoraClient();
-        setupIndexJobProcessorThread(settings, client, indexJobQueue);
+        setupIndexJobProcessorThread(settings);
 
         logger.info("created");
+    }
+
+    private void setupOaiHarvesterThread() throws Exception {
+        oaiHarvester = new OaiHarvesterBuilder()
+                .settings(oaiSettings)
+                .esClient(esClient)
+                .riverName(riverName)
+                .indexJobQueue(indexJobQueue)
+                .logger(logger)
+                .build();
+        oaiHarvesterThread = EsExecutors.daemonThreadFactory(
+                settings.globalSettings(),
+                "fedora-river-oaiHarvester").newThread(oaiHarvester);
     }
 
     @Override
     public void start() {
         setupIndex(esClient, indexName);
         apimConsumerThread.start();
+        oaiHarvesterThread.start();
         indexJobProcessorThread.start();
         logger.info("started");
     }
@@ -101,6 +122,7 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
     @Override
     public void close() {
         apimConsumer.terminate();
+        oaiHarvester.terminate();
         indexJobProcessor.terminate();
         logger.info("closed");
     }
@@ -218,13 +240,18 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
             throw new ConfigurationException("No Fedora repository has been configured. " +
                     "Please specify fedora.* options in the Fedora River metadata.");
         }
+
+        if (settings.settings().containsKey("oai")) {
+            this.oaiSettings =
+                    XContentMapValues.nodeMapValue(settings.settings().get("oai"), "oai");
+        }
     }
 
-    private void setupIndexJobProcessorThread(RiverSettings settings, Client client, UniquePredicateDelayQueue<IndexJob> indexJobQueue) {
+    private void setupIndexJobProcessorThread(RiverSettings settings) {
         indexJobProcessor = new IndexJobProcessor(
                 indexJobQueue,
                 indexName,
-                client,
+                esClient,
                 fedoraClient,
                 logger,
                 sdefPid,
@@ -235,7 +262,7 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
                 "fedora-river-indexJobProcessor").newThread(indexJobProcessor);
     }
 
-    private void setupApimConsumerThread(RiverSettings settings, UniquePredicateDelayQueue<IndexJob> indexJobQueue) throws URISyntaxException {
+    private void setupApimConsumerThread(RiverSettings settings) throws URISyntaxException {
         apimConsumer = new APIMConsumer(
                 new URI(brokerUrl),
                 messageSelector,
