@@ -286,8 +286,11 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
 
         prepareMapping(esClient, indexName, ObjectIndexJob.ES_TYPE_NAME,
                 this.getClass().getResourceAsStream("/mapping-object.json"));
-        prepareMapping(esClient, indexName, ObjectIndexJob.ES_TYPE_NAME,
-                disseminationContentMapping);
+
+        if (disseminationContentMapping != null && !disseminationContentMapping.isEmpty()) {
+            prepareMapping(esClient, indexName, ObjectIndexJob.ES_TYPE_NAME,
+                    disseminationContentMapping);
+        }
 
         prepareMapping(esClient, indexName, DatastreamIndexJob.ES_TYPE_NAME,
                 this.getClass().getResourceAsStream("/mapping-datastream.json"));
