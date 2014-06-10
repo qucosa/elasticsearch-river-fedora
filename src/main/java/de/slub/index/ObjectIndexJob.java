@@ -34,7 +34,6 @@ import org.elasticsearch.common.xcontent.XContentType;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -80,7 +79,6 @@ public class ObjectIndexJob extends IndexJob {
                 .execute().actionGet();
 
         List<IndexJob> datastreamIndexJobs = new ArrayList<>();
-
         try {
             GetDatastreamsResponse getDatastreamsResponse =
                     (GetDatastreamsResponse) fedoraClient.execute(new GetDatastreams(pid()));
@@ -92,6 +90,8 @@ public class ObjectIndexJob extends IndexJob {
             log.error("Couldn't generate datastream index jobs for {}. Reason: {}",
                     pid(), ex.getMessage());
         }
+
+        deleteErrorDocuments(client);
 
         return datastreamIndexJobs;
     }
@@ -138,6 +138,13 @@ public class ObjectIndexJob extends IndexJob {
             throw new Exception(
                     String.format("Failed parsing dissemination: %s", ioex.getMessage()));
         }
+    }
+
+    private void deleteErrorDocuments(Client client) {
+        client.prepareDeleteByQuery(index())
+                .setTypes(ES_TYPE_NAME, IndexJobProcessor.ES_ERROR_TYPE_NAME)
+                .setQuery(termQuery("_id", esid()))
+                .execute().actionGet();
     }
 
 }

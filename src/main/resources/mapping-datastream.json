@@ -1,4 +1,11 @@
 {
+    "_parent": {
+        "type": "object"
+    },
+    "_routing": {
+        "required": true,
+        "path": "PID"
+    },
     "properties": {
         "PID": {
             "type": "string",

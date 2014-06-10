@@ -24,6 +24,7 @@ import com.yourmediashelf.fedora.client.response.GetDatastreamResponse;
 import com.yourmediashelf.fedora.generated.management.DatastreamProfile;
 import org.apache.commons.io.IOUtils;
 import org.apache.tika.parser.ParsingReader;
+import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.xcontent.XContentBuilder;
@@ -55,10 +56,7 @@ public class DatastreamIndexJob extends IndexJob {
 
     @Override
     protected java.util.List<IndexJob> executeDelete(FedoraClient fedoraClient, Client client, ESLogger log) {
-        client.prepareDeleteByQuery(index())
-                .setTypes(ES_TYPE_NAME, IndexJobProcessor.ES_ERROR_TYPE_NAME)
-                .setQuery(termQuery("_id", esid()))
-                .execute().actionGet();
+        deleteErrorDocuments(client);
         return null;
     }
 
@@ -70,9 +68,13 @@ public class DatastreamIndexJob extends IndexJob {
 
     @Override
     protected java.util.List<IndexJob> executeCreate(FedoraClient fedoraClient, Client client, ESLogger log) throws Exception {
-        client.prepareIndex(index(), indexType(), esid())
+        IndexResponse response = client.prepareIndex(index(), indexType(), esid())
+                .setParent(pid())
                 .setSource(buildIndexObject(fedoraClient))
                 .execute().actionGet();
+        if (response.isCreated()) {
+            deleteErrorDocuments(client);
+        }
         return null;
     }
 
@@ -123,6 +125,13 @@ public class DatastreamIndexJob extends IndexJob {
         }
 
         jb.endObject();
+    }
+
+    private void deleteErrorDocuments(Client client) {
+        client.prepareDeleteByQuery(index())
+                .setTypes(ES_TYPE_NAME, IndexJobProcessor.ES_ERROR_TYPE_NAME)
+                .setQuery(termQuery("_id", esid()))
+                .execute().actionGet();
     }
 
 }

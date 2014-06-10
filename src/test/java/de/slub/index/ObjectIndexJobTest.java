@@ -39,6 +39,7 @@ import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 
+@Ignore("Only for manual debugging. Subsequent Datastream indexing cannot be mocked.")
 public class ObjectIndexJobTest {
 
     private static final ISO8601DateFormat dateFormatParser = new ISO8601DateFormat();
@@ -75,7 +76,21 @@ public class ObjectIndexJobTest {
     }
 
     @Test
-    @Ignore("Mocking doesn't work")
+    public void deleteErrorDocumentsWhenEverythingWentFine() throws Exception {
+        esNode.client().prepareIndex("idx1", "error", "test:1234")
+                .setSource(jsonBuilder().startObject()
+                        .field("PID", "test:1234")
+                        .endObject())
+                .execute().actionGet();
+
+        ObjectIndexJob job = new ObjectIndexJob(CREATE, "test:1234");
+        job.index("idx1").execute(fedoraClient, esNode.client(), esLogger);
+
+        GetResponse response = esNode.client().get(new GetRequest("idx1", "error", "test:1234")).actionGet();
+        assertFalse(response.isExists());
+    }
+
+    @Test
     public void deleteIndexJobRemovesDocumentFromIndex() throws Exception {
         ObjectIndexJob job1 = new ObjectIndexJob(CREATE, "test:1234");
         job1.index("idx1").execute(fedoraClient, esNode.client(), esLogger);
@@ -88,7 +103,6 @@ public class ObjectIndexJobTest {
     }
 
     @Test
-    @Ignore("Mocking doesn't work")
     public void deletesDatastreamDocumentsFromIndex() throws Exception {
         ObjectIndexJob job1 = new ObjectIndexJob(CREATE, "test:1234");
         job1.index("idx1").execute(fedoraClient, esNode.client(), esLogger);
