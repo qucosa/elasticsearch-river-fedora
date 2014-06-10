@@ -73,8 +73,7 @@
                     "type": "string",
                     "store": false
                 }
-            },
-            "store": false
+            }
         }
     }
 }
