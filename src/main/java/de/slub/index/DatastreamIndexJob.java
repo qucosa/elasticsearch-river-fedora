@@ -129,7 +129,7 @@ public class DatastreamIndexJob extends IndexJob {
 
     private void deleteErrorDocuments(Client client) {
         client.prepareDeleteByQuery(index())
-                .setTypes(ES_TYPE_NAME, IndexJobProcessor.ES_ERROR_TYPE_NAME)
+                .setTypes(IndexJobProcessor.ES_ERROR_TYPE_NAME)
                 .setQuery(termQuery("_id", esid()))
                 .execute().actionGet();
     }
