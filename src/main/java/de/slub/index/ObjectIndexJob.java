@@ -84,9 +84,7 @@ public class ObjectIndexJob extends IndexJob {
         try {
             GetDatastreamsResponse getDatastreamsResponse =
                     (GetDatastreamsResponse) fedoraClient.execute(new GetDatastreams(pid()));
-            Iterator it = getDatastreamsResponse.getDatastreamProfiles().iterator();
-            while (it.hasNext()) {
-                DatastreamProfile dp = (DatastreamProfile) it.next();
+            for (DatastreamProfile dp : getDatastreamsResponse.getDatastreamProfiles()) {
                 datastreamIndexJobs.add(
                         new DatastreamIndexJob(Type.CREATE, dp.getPid(), dp.getDsID()));
             }
