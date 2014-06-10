@@ -117,7 +117,7 @@ public class DatastreamIndexJob extends IndexJob {
         InputStream contentInputStream = dsResponse.getEntityInputStream();
         try {
             Reader reader = new ParsingReader(contentInputStream);
-            jb.field("_text", IOUtils.toString(reader));
+            jb.field("_content", IOUtils.toString(reader));
         } finally {
             contentInputStream.close();
         }
