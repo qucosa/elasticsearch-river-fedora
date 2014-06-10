@@ -133,9 +133,17 @@ public class OaiHarvester implements Runnable {
             } catch (Exception ex) {
                 logger.error(ex.getMessage());
             } finally {
-                TimeUnit.MILLISECONDS.sleep(interval.getMillis());
+                if (resumptionTokenIsPresent()) {
+                    TimeUnit.SECONDS.sleep(1);
+                } else {
+                    TimeUnit.MILLISECONDS.sleep(interval.getMillis());
+                }
             }
         }
+    }
+
+    private boolean resumptionTokenIsPresent() {
+        return resumptionToken != null && !resumptionToken.isEmpty();
     }
 
     private Date now() {
@@ -187,7 +195,7 @@ public class OaiHarvester implements Runnable {
     private void writeLastrun(final Date timestamp) throws IOException {
         XContentBuilder jb = jsonBuilder().startObject();
         jb.field("timestamp", timestamp);
-        if (resumptionToken != null && !resumptionToken.isEmpty()) {
+        if (resumptionTokenIsPresent()) {
             jb.field("resumption_token", resumptionToken);
         }
         if (expirationDate != null) {
