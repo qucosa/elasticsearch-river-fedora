@@ -17,6 +17,7 @@
 package de.slub.index;
 
 import com.yourmediashelf.fedora.client.FedoraClient;
+import de.slub.util.TerminateableRunnable;
 import de.slub.util.concurrent.UniquePredicateDelayQueue;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
 import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
@@ -30,14 +31,13 @@ import org.elasticsearch.node.NodeBuilder;
 import org.junit.*;
 
 import java.io.IOException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
-@Ignore("Tests have timing issues")
+@Ignore("Doesn't work. God knows why.")
 public class IndexJobProcessorTest {
 
     private static Node esNode;
@@ -46,7 +46,25 @@ public class IndexJobProcessorTest {
     private Client esClient;
     private FedoraClient fedoraClient;
     private ESLogger esLogger;
-    private ExecutorService executorService;
+
+    @Test
+    public void writesIndexErrorDocument() throws Exception {
+        IndexJob job = mock(IndexJob.class);
+        doThrow(new Exception("Test")).when(job).execute(fedoraClient, esClient, esLogger);
+        when(job.index(anyString())).thenReturn(job);
+        when(job.indexType()).thenReturn("testtype");
+        when(job.pid()).thenReturn("test:1");
+        jobQueue.add(job);
+
+        runAndWait(indexJobProcessor);
+
+        esClient.admin().indices().refresh(new RefreshRequest("testindex")).actionGet();
+
+        GetResponse response = esClient.prepareGet("testindex", "error", "test:1").execute().actionGet();
+        assertTrue(response.isExists());
+        assertEquals("Test", response.getSourceAsMap().get("message"));
+        assertTrue("Timestamp missing", response.getSourceAsMap().containsKey("timestamp"));
+    }
 
     @BeforeClass
     public static void setupEsNode() throws InterruptedException, IOException {
@@ -69,27 +87,6 @@ public class IndexJobProcessorTest {
         esNode.stop();
     }
 
-    @Test
-    public void writesIndexErrorDocument() throws Exception {
-        IndexJob job = mock(IndexJob.class);
-        doThrow(new Exception("Test")).when(job).execute(fedoraClient, esClient, esLogger);
-        when(job.index(anyString())).thenReturn(job);
-        when(job.indexType()).thenReturn("testtype");
-        when(job.pid()).thenReturn("test:1");
-        jobQueue.add(job);
-
-        executorService.execute(indexJobProcessor);
-        indexJobProcessor.terminate();
-        Thread.sleep(2000);
-
-        esClient.admin().indices().refresh(new RefreshRequest("testindex")).actionGet();
-
-        GetResponse response = esClient.prepareGet("testindex", "error", "test:1").execute().actionGet();
-        assertTrue(response.isExists());
-        assertEquals("Test", response.getSourceAsMap().get("message"));
-        assertTrue("Timestamp missing", response.getSourceAsMap().containsKey("timestamp"));
-    }
-
     @Before
     public void setup() {
         jobQueue = new UniquePredicateDelayQueue<>();
@@ -102,16 +99,20 @@ public class IndexJobProcessorTest {
                 esClient,
                 fedoraClient,
                 esLogger);
-        executorService = Executors.newSingleThreadExecutor();
     }
 
     @After
     public void teardown() {
-        if (!executorService.isShutdown()) {
-            executorService.shutdown();
-        }
         reset(fedoraClient);
         jobQueue.clear();
+    }
+
+    private void runAndWait(TerminateableRunnable runnable) throws InterruptedException {
+        Thread thread = new Thread(runnable);
+        thread.start();
+        TimeUnit.SECONDS.sleep(1);
+        runnable.terminate();
+        thread.join();
     }
 
 }

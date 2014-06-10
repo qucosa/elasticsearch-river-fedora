@@ -17,6 +17,7 @@
 package de.slub.index;
 
 import com.yourmediashelf.fedora.client.FedoraClient;
+import de.slub.util.TerminateableRunnable;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.logging.ESLogger;
 
@@ -28,7 +29,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 
-public class IndexJobProcessor implements Runnable {
+public class IndexJobProcessor extends TerminateableRunnable {
 
     public static final String ES_ERROR_TYPE_NAME = "error";
     private final Client client;
@@ -38,7 +39,6 @@ public class IndexJobProcessor implements Runnable {
     private final String indexName;
     private final String sdefPid;
     private final String method;
-    private boolean terminated = false;
 
     public IndexJobProcessor(BlockingQueue<IndexJob> indexJobQueue, String indexName, Client esClient,
                              FedoraClient fedoraClient, ESLogger logger, String sdefPid, String method) {
@@ -56,14 +56,11 @@ public class IndexJobProcessor implements Runnable {
         this(indexJobQueue, indexName, esClient, fedoraClient, logger, "", "");
     }
 
-    public void terminate() {
-        terminated = true;
-    }
-
     @Override
     public void run() {
         try {
-            while (!terminated) {
+            while (isRunning()) {
+                // TODO take as much jobs as possible and do Bulk-Operation
                 IndexJob job = queue.poll(1, TimeUnit.SECONDS);
                 if (job != null) {
                     perform(job);

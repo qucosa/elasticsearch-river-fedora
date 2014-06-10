@@ -16,6 +16,7 @@
 
 package de.slub.fedora.jms;
 
+import de.slub.util.TerminateableRunnable;
 import de.slub.index.IndexJob;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.elasticsearch.common.logging.ESLogger;
@@ -26,7 +27,7 @@ import java.util.concurrent.TimeUnit;
 
 import static de.slub.fedora.jms.MessageMapper.map;
 
-public class APIMConsumer implements Runnable {
+public class APIMConsumer extends TerminateableRunnable {
 
     private final URI uri;
     private final ESLogger log;
@@ -36,7 +37,6 @@ public class APIMConsumer implements Runnable {
     private Connection connection;
     private Session session;
     private MessageConsumer consumer;
-    private boolean terminated = false;
 
     public APIMConsumer(URI broker, String messageSelector, String topicFilter, java.util.Queue<IndexJob> indexJobQueue, ESLogger logger) {
         this.uri = broker;
@@ -58,12 +58,8 @@ public class APIMConsumer implements Runnable {
         }
     }
 
-    public void terminate() {
-        terminated = true;
-    }
-
     private void receiveLoop() {
-        while (!terminated) {
+        while (isRunning()) {
             Message msg = null;
             try {
                 msg = consumer.receive(TimeUnit.SECONDS.toMillis(1));

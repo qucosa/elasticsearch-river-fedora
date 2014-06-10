@@ -21,6 +21,7 @@ import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import de.slub.index.IndexJob;
 import de.slub.index.ObjectIndexJob;
+import de.slub.util.TerminateableRunnable;
 import de.slub.util.concurrent.UniquePredicateDelayQueue;
 import org.apache.commons.io.IOUtils;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
@@ -219,11 +220,11 @@ public class OaiHarvesterTestIT {
                 .logger(ESLoggerFactory.getLogger(this.getClass().getName())).build();
     }
 
-    private void runAndWait(OaiHarvester oaiHarvester) throws InterruptedException {
-        Thread thread = new Thread(oaiHarvester);
+    private void runAndWait(TerminateableRunnable runnable) throws InterruptedException {
+        Thread thread = new Thread(runnable);
         thread.start();
         TimeUnit.MILLISECONDS.sleep(1000);
-        oaiHarvester.terminate();
+        runnable.terminate();
         thread.join();
     }
 

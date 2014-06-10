@@ -18,6 +18,7 @@ package de.slub.fedora.oai;
 
 import de.slub.index.IndexJob;
 import de.slub.index.ObjectIndexJob;
+import de.slub.util.TerminateableRunnable;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -55,7 +56,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 
-public class OaiHarvester implements Runnable {
+public class OaiHarvester extends TerminateableRunnable {
 
     private final ESLogger logger;
     private final URL url;
@@ -63,7 +64,6 @@ public class OaiHarvester implements Runnable {
     private final Client client;
     private final RiverName riverName;
     private final Queue<IndexJob> jobQueue;
-    private boolean terminated = false;
     private Date lastrun;
     private String resumptionToken;
     private Date expirationDate;
@@ -98,12 +98,8 @@ public class OaiHarvester implements Runnable {
         }
     }
 
-    public void terminate() {
-        terminated = true;
-    }
-
     private void harvestLoop() throws URISyntaxException, InterruptedException {
-        while (!terminated) {
+        while (isRunning()) {
             Date timestamp = now();
             getLastrunParameters();
 
