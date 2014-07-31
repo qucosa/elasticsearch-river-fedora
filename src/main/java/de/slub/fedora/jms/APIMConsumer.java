@@ -87,17 +87,23 @@ public class APIMConsumer extends TerminateableRunnable {
     }
 
     private void startup() throws JMSException {
+        log.debug("Set up ActiveMQ connection to {}...", uri.toASCIIString());
+
         ActiveMQConnectionFactory connectionFactory =
                 new ActiveMQConnectionFactory(uri);
-
         connection = connectionFactory.createConnection();
         connection.start();
+
+        log.debug("Connection started!");
+
         session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
         Destination destination = session.createTopic(topicFilter);
 
         if (messageSelector == null || messageSelector.isEmpty()) {
+            log.debug("Create message consumer");
             consumer = session.createConsumer(destination);
         } else {
+            log.debug("Create message consumer with selector: {}", messageSelector);
             consumer = session.createConsumer(destination, messageSelector);
         }
 
@@ -106,6 +112,7 @@ public class APIMConsumer extends TerminateableRunnable {
 
     private void shutdown() {
         try {
+            log.debug("Shutdown...");
             consumer.close();
         } catch (JMSException e) {
             log.error("Error closing ActiveMQ consumer: " + e.getMessage());
