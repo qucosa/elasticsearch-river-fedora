@@ -131,6 +131,7 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
         try {
             fedoraClient = new FedoraClient(
                     new FedoraCredentials(fedoraUrl, username, password));
+
             DescribeRepositoryResponse describeResponse =
                     (DescribeRepositoryResponse) fedoraClient.execute(new DescribeRepository());
 
@@ -141,7 +142,7 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
                     repoInfo.getRepositoryBaseURL(),
                     username);
         } catch (Exception ex) {
-            logger.error("Error initializing Fedora connection: " + ex.getCause().getMessage());
+            logger.error("Error initializing Fedora connection: " + ex.getMessage());
             throw ex;
         }
     }

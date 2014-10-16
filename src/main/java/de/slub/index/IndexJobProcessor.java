@@ -67,7 +67,7 @@ public class IndexJobProcessor extends TerminateableRunnable {
                 }
             }
         } catch (Exception ex) {
-            log.error("Error: " + ex.getMessage() + " Reason: " + ex.getCause().getMessage());
+            log.error("Error: " + ex.getMessage() + " Reason: " + ex.getMessage());
         }
     }
 

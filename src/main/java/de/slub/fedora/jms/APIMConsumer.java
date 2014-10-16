@@ -80,7 +80,7 @@ public class APIMConsumer extends TerminateableRunnable {
                         log.debug("No index job scheduled (no mapping for JMS message)");
                     }
                 } catch (Exception e) {
-                    log.error("Failed creating index job: " + e.getCause().getMessage());
+                    log.error("Failed creating index job: " + e.getMessage());
                 }
             }
         }
