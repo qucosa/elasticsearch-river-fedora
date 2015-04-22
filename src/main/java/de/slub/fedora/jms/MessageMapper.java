@@ -33,6 +33,8 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class MessageMapper {
@@ -47,34 +49,34 @@ public class MessageMapper {
         xPath = xPathFactory.newXPath();
     }
 
-    public static IndexJob map(Message message) throws Exception {
-        IndexJob indexJob = null;
+    public static List<IndexJob> map(Message message) throws Exception {
+        ArrayList<IndexJob> indexJobs = new ArrayList<>();
         String pid = message.getStringProperty("pid");
         String dsid = extractDsId(((TextMessage) message).getText());
         String methodName = message.getStringProperty("methodName");
         switch (methodName) {
             case "ingest":
-                indexJob = new ObjectIndexJob(IndexJob.Type.CREATE, pid, 1, TimeUnit.SECONDS);
+                indexJobs.add(new ObjectIndexJob(IndexJob.Type.CREATE, pid, 1, TimeUnit.SECONDS));
                 break;
             case "addDatastream":
-                indexJob = new DatastreamIndexJob(IndexJob.Type.CREATE, pid, dsid, 1, TimeUnit.SECONDS);
+                indexJobs.add(new DatastreamIndexJob(IndexJob.Type.CREATE, pid, dsid, 1, TimeUnit.SECONDS));
                 break;
             case "purgeObject":
-                indexJob = new ObjectIndexJob(IndexJob.Type.DELETE, pid);
+                indexJobs.add(new ObjectIndexJob(IndexJob.Type.DELETE, pid));
                 break;
             case "purgeDatastream":
-                indexJob = new DatastreamIndexJob(IndexJob.Type.DELETE, pid, dsid);
+                indexJobs.add(new DatastreamIndexJob(IndexJob.Type.DELETE, pid, dsid));
                 break;
             case "modifyObject":
-                indexJob = new ObjectIndexJob(IndexJob.Type.UPDATE, pid, 5, TimeUnit.SECONDS);
+                indexJobs.add(new ObjectIndexJob(IndexJob.Type.UPDATE, pid, 5, TimeUnit.SECONDS));
                 break;
             case "modifyDatastreamByReference":
             case "modifyDatastreamByValue":
             case "setDatastreamState":
-                indexJob = new DatastreamIndexJob(IndexJob.Type.UPDATE, pid, dsid, 5, TimeUnit.SECONDS);
+                indexJobs.add(new DatastreamIndexJob(IndexJob.Type.UPDATE, pid, dsid, 5, TimeUnit.SECONDS));
                 break;
         }
-        return indexJob;
+        return indexJobs;
     }
 
     private static String extractDsId(String text) throws IOException, SAXException, ParserConfigurationException, XPathExpressionException {

@@ -40,7 +40,7 @@ public class MessageMapperTest {
         when(message.getStringProperty(eq("methodName"))).thenReturn("getObjectXML");
         when(message.getText()).thenReturn(getContent("/jms/getObjectXML.xml"));
 
-        assertNull(MessageMapper.map(message));
+        assertEquals(0, MessageMapper.map(message).size());
     }
 
     @Test
@@ -50,7 +50,7 @@ public class MessageMapperTest {
         when(message.getStringProperty(eq("methodName"))).thenReturn("ingest");
         when(message.getText()).thenReturn(getContent("/jms/ingest.xml"));
 
-        IndexJob ij = MessageMapper.map(message);
+        IndexJob ij = MessageMapper.map(message).get(0);
 
         assertEquals(
                 new ObjectIndexJob(IndexJob.Type.CREATE, "test-rest:1"),
@@ -64,7 +64,7 @@ public class MessageMapperTest {
         when(message.getStringProperty(eq("methodName"))).thenReturn("addDatastream");
         when(message.getText()).thenReturn(getContent("/jms/addDatastream.xml"));
 
-        IndexJob ij = MessageMapper.map(message);
+        IndexJob ij = MessageMapper.map(message).get(0);
 
         assertEquals(
                 new DatastreamIndexJob(IndexJob.Type.CREATE, "test-rest:1", "testAddDatastream"),
@@ -78,7 +78,7 @@ public class MessageMapperTest {
         when(message.getStringProperty(eq("methodName"))).thenReturn("modifyDatastreamByValue");
         when(message.getText()).thenReturn(getContent("/jms/modifyDatastreamByValue.xml"));
 
-        IndexJob ij = MessageMapper.map(message);
+        IndexJob ij = MessageMapper.map(message).get(0);
 
         assertEquals(
                 new DatastreamIndexJob(IndexJob.Type.UPDATE, "test-rest:1", "testModifyDatastream"),
@@ -92,7 +92,7 @@ public class MessageMapperTest {
         when(message.getStringProperty(eq("methodName"))).thenReturn("modifyObject");
         when(message.getText()).thenReturn(getContent("/jms/modifyObject.xml"));
 
-        IndexJob ij = MessageMapper.map(message);
+        IndexJob ij = MessageMapper.map(message).get(0);
 
         assertEquals(
                 new ObjectIndexJob(IndexJob.Type.UPDATE, "test-rest:1"),
@@ -106,7 +106,7 @@ public class MessageMapperTest {
         when(message.getStringProperty(eq("methodName"))).thenReturn("purgeDatastream");
         when(message.getText()).thenReturn(getContent("/jms/purgeDatastream.xml"));
 
-        IndexJob ij = MessageMapper.map(message);
+        IndexJob ij = MessageMapper.map(message).get(0);
 
         assertEquals(
                 new DatastreamIndexJob(IndexJob.Type.DELETE, "test-rest:1", "testPurgeDatastream"),
@@ -120,7 +120,7 @@ public class MessageMapperTest {
         when(message.getStringProperty(eq("methodName"))).thenReturn("purgeObject");
         when(message.getText()).thenReturn(getContent("/jms/purgeObject.xml"));
 
-        IndexJob ij = MessageMapper.map(message);
+        IndexJob ij = MessageMapper.map(message).get(0);
 
         assertEquals(
                 new ObjectIndexJob(IndexJob.Type.DELETE, "test-rest:1"),
@@ -130,6 +130,4 @@ public class MessageMapperTest {
     private String getContent(String filename) throws IOException {
         return IOUtils.toString(this.getClass().getResourceAsStream(filename));
     }
-
-
 }

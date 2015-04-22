@@ -16,13 +16,14 @@
 
 package de.slub.fedora.jms;
 
-import de.slub.util.TerminateableRunnable;
 import de.slub.index.IndexJob;
+import de.slub.util.TerminateableRunnable;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.elasticsearch.common.logging.ESLogger;
 
 import javax.jms.*;
 import java.net.URI;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static de.slub.fedora.jms.MessageMapper.map;
@@ -69,19 +70,22 @@ public class APIMConsumer extends TerminateableRunnable {
             if ((msg != null) && (msg instanceof TextMessage)) {
                 try {
                     log.debug("received:\n" + ((TextMessage) msg).getText());
-                    IndexJob idxJob = map(msg);
-                    if (idxJob != null) {
-                        if (indexJobQueue.add(idxJob)) {
-                            log.debug("Index job scheduled: " + idxJob);
-                        } else {
-                            log.debug("No index job scheduled (PID/DSID doesn't match or job is scheduled already).");
-                        }
-                    } else {
-                        log.debug("No index job scheduled (no mapping for JMS message)");
-                    }
+                    scheduleJobs(map(msg));
                 } catch (Exception e) {
                     log.error("Failed creating index job: " + e.getMessage());
                 }
+            }
+        }
+    }
+
+    private void scheduleJobs(List<IndexJob> indexJobs) {
+        if (indexJobs.isEmpty()) {
+            log.debug("No index jobs scheduled: No mapping for JMS message.");
+        } else {
+            if (indexJobQueue.addAll(indexJobs)) {
+                log.debug("Index jobs scheduled: %d", indexJobs.size());
+            } else {
+                log.debug("No index jobs scheduled: PID/DSID doesn't match or jobs are scheduled already.");
             }
         }
     }
