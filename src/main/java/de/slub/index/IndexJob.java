@@ -97,9 +97,7 @@ public abstract class IndexJob extends DelayedQueueElement {
 
     @Override
     public String toString() {
-        return String.format("[%s] [%s:%s]",
-                type.toString(),
-                pid, dsid);
+        return String.format("[%s] [%s]", type.toString(), esid());
     }
 
     public List<IndexJob> execute(FedoraClient fedoraClient, Client client, ESLogger log)
