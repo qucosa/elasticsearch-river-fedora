@@ -22,6 +22,8 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 
+import static de.slub.index.IndexJob.Type.CREATE;
+import static de.slub.index.IndexJob.Type.UPDATE;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -31,19 +33,25 @@ public class ExcludeDatastreamPredicateTest {
             new ArrayList<String>() {{
                 add("DC");
                 add("RELS-EXT");
+                add("MODS");
             }}
     );
 
     @Test
+    public void ignoresObjectIndexJobsWithDatastreamIds() {
+        assertTrue(predicate.evaluate(new ObjectIndexJob(UPDATE, "test:1234", "MODS")));
+    }
+
+    @Test
     public void evaluatesToFalseForGivenDatastreamIds() {
-        assertFalse(predicate.evaluate(new DatastreamIndexJob(IndexJob.Type.CREATE, "test:1234", "DC")));
-        assertFalse(predicate.evaluate(new DatastreamIndexJob(IndexJob.Type.CREATE, "test:1234", "RELS-EXT")));
+        assertFalse(predicate.evaluate(new DatastreamIndexJob(CREATE, "test:1234", "DC")));
+        assertFalse(predicate.evaluate(new DatastreamIndexJob(CREATE, "test:1234", "RELS-EXT")));
     }
 
     @Test
     public void evaluatesToTrueForNotGivenDatastreamIds() {
-        assertTrue(predicate.evaluate(new DatastreamIndexJob(IndexJob.Type.CREATE, "test:1234", "MODS")));
-        assertTrue(predicate.evaluate(new DatastreamIndexJob(IndexJob.Type.CREATE, "test:1234", "RELS-INT")));
+        assertTrue(predicate.evaluate(new DatastreamIndexJob(CREATE, "test:1234", "ATT-1")));
+        assertTrue(predicate.evaluate(new DatastreamIndexJob(CREATE, "test:1234", "RELS-INT")));
     }
 
 }

@@ -30,10 +30,12 @@ public class ExcludeDatastreamPredicate implements Predicate<IndexJob> {
 
     @Override
     public boolean evaluate(IndexJob job) {
-        if (!job.dsid().isEmpty()) {
-            for (String excluded : excludeDatastreams) {
-                if (job.dsid().equals(excluded)) {
-                    return false;
+        if (job instanceof DatastreamIndexJob) {
+            if (!job.dsid().isEmpty()) {
+                for (String excluded : excludeDatastreams) {
+                    if (job.dsid().equals(excluded)) {
+                        return false;
+                    }
                 }
             }
         }

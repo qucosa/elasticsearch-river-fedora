@@ -38,5 +38,4 @@ public class MatchPidPredicateTest {
         assertFalse(predicate.evaluate(new ObjectIndexJob(UPDATE, "NOOP:1234")));
     }
 
-
 }

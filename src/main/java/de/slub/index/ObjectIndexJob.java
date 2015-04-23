@@ -56,6 +56,10 @@ public class ObjectIndexJob extends IndexJob {
         super(type, pid, dsid, delay, unit);
     }
 
+    public ObjectIndexJob(Type type, String pid, String dsid) {
+        super(type, pid, dsid);
+    }
+
     @Override
     public String esid() {
         // Mask dsid for hash code generation and ES target ID
