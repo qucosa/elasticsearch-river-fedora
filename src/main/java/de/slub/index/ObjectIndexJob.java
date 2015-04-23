@@ -44,12 +44,24 @@ public class ObjectIndexJob extends IndexJob {
 
     public static final String ES_TYPE_NAME = "object";
 
-    public ObjectIndexJob(Type type, String pid, int delay, TimeUnit unit) {
+    public ObjectIndexJob(Type type, String pid) {
+        super(type, pid);
+    }
+
+    public ObjectIndexJob(Type type, String pid, long delay, TimeUnit unit) {
         super(type, pid, delay, unit);
     }
 
-    public ObjectIndexJob(Type type, String pid) {
-        super(type, pid);
+    public ObjectIndexJob(Type type, String pid, String dsid, long delay, TimeUnit unit) {
+        super(type, pid, dsid, delay, unit);
+    }
+
+    @Override
+    public String esid() {
+        // Mask dsid for hash code generation and ES target ID
+        // to treat object index jobs same when they are generated
+        // by different datastream events
+        return pid();
     }
 
     @Override

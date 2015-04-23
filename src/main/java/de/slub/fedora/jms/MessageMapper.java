@@ -37,6 +37,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import static de.slub.index.IndexJob.Type.CREATE;
+import static de.slub.index.IndexJob.Type.DELETE;
+import static de.slub.index.IndexJob.Type.UPDATE;
+
 public class MessageMapper {
 
     private static final DocumentBuilderFactory documentBuilderFactory =
@@ -56,24 +60,25 @@ public class MessageMapper {
         String methodName = message.getStringProperty("methodName");
         switch (methodName) {
             case "ingest":
-                indexJobs.add(new ObjectIndexJob(IndexJob.Type.CREATE, pid, 1, TimeUnit.SECONDS));
+                indexJobs.add(new ObjectIndexJob(CREATE, pid, 1, TimeUnit.SECONDS));
                 break;
             case "addDatastream":
-                indexJobs.add(new DatastreamIndexJob(IndexJob.Type.CREATE, pid, dsid, 1, TimeUnit.SECONDS));
+                indexJobs.add(new DatastreamIndexJob(CREATE, pid, dsid, 1, TimeUnit.SECONDS));
                 break;
             case "purgeObject":
-                indexJobs.add(new ObjectIndexJob(IndexJob.Type.DELETE, pid));
+                indexJobs.add(new ObjectIndexJob(DELETE, pid));
                 break;
             case "purgeDatastream":
-                indexJobs.add(new DatastreamIndexJob(IndexJob.Type.DELETE, pid, dsid));
+                indexJobs.add(new DatastreamIndexJob(DELETE, pid, dsid));
                 break;
             case "modifyObject":
-                indexJobs.add(new ObjectIndexJob(IndexJob.Type.UPDATE, pid, 5, TimeUnit.SECONDS));
+                indexJobs.add(new ObjectIndexJob(UPDATE, pid, 5, TimeUnit.SECONDS));
                 break;
             case "modifyDatastreamByReference":
             case "modifyDatastreamByValue":
             case "setDatastreamState":
-                indexJobs.add(new DatastreamIndexJob(IndexJob.Type.UPDATE, pid, dsid, 5, TimeUnit.SECONDS));
+                indexJobs.add(new ObjectIndexJob(UPDATE, pid, dsid, 1, TimeUnit.SECONDS));
+                indexJobs.add(new DatastreamIndexJob(UPDATE, pid, dsid, 5, TimeUnit.SECONDS));
                 break;
         }
         return indexJobs;

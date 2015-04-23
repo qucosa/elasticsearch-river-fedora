@@ -52,7 +52,7 @@ public abstract class IndexJob extends DelayedQueueElement {
         this.type = type;
         this.pid = pid;
         this.dsid = dsid;
-        this.hashCode = (type + pid + dsid).hashCode();
+        this.hashCode = (type + esid()).hashCode();
     }
 
     public String index() {
