@@ -31,13 +31,13 @@ import org.elasticsearch.node.NodeBuilder;
 import org.junit.*;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
 
-@Ignore("Doesn't work. God knows why.")
 public class IndexJobProcessorTest {
 
     private static Node esNode;
@@ -46,25 +46,6 @@ public class IndexJobProcessorTest {
     private Client esClient;
     private FedoraClient fedoraClient;
     private ESLogger esLogger;
-
-    @Test
-    public void writesIndexErrorDocument() throws Exception {
-        IndexJob job = mock(IndexJob.class);
-        doThrow(new Exception("Test")).when(job).execute(fedoraClient, esClient, esLogger);
-        when(job.index(anyString())).thenReturn(job);
-        when(job.indexType()).thenReturn("testtype");
-        when(job.pid()).thenReturn("test:1");
-        jobQueue.add(job);
-
-        runAndWait(indexJobProcessor);
-
-        esClient.admin().indices().refresh(new RefreshRequest("testindex")).actionGet();
-
-        GetResponse response = esClient.prepareGet("testindex", "error", "test:1").execute().actionGet();
-        assertTrue(response.isExists());
-        assertEquals("Test", response.getSourceAsMap().get("message"));
-        assertTrue("Timestamp missing", response.getSourceAsMap().containsKey("timestamp"));
-    }
 
     @BeforeClass
     public static void setupEsNode() throws InterruptedException, IOException {
@@ -85,6 +66,20 @@ public class IndexJobProcessorTest {
     public static void teardownEsNode() {
         esNode.client().close();
         esNode.stop();
+    }
+
+    @Test
+    public void writesIndexErrorDocument() throws Exception {
+        jobQueue.add(new CrashingJob(IndexJob.Type.CREATE, "test:1"));
+
+        runAndWait(indexJobProcessor);
+
+        esClient.admin().indices().refresh(new RefreshRequest("testindex")).actionGet();
+
+        GetResponse response = esClient.prepareGet("testindex", "error", "test:1").execute().actionGet();
+        assertTrue(response.isExists());
+        assertTrue(response.getSourceAsMap().get("message").toString().contains("crashed"));
+        assertTrue("Timestamp missing", response.getSourceAsMap().containsKey("timestamp"));
     }
 
     @Before
@@ -115,4 +110,26 @@ public class IndexJobProcessorTest {
         thread.join();
     }
 
+    private class CrashingJob extends IndexJob {
+        private final Exception EXCEPTION = new Exception(this + " crashed");
+
+        public CrashingJob(Type type, String pid) {
+            super(type, pid);
+        }
+
+        @Override
+        protected List<IndexJob> executeDelete(FedoraClient fedoraClient, Client client, ESLogger log) throws Exception {
+            throw EXCEPTION;
+        }
+
+        @Override
+        protected List<IndexJob> executeUpdate(FedoraClient fedoraClient, Client client, ESLogger log) throws Exception {
+            throw EXCEPTION;
+        }
+
+        @Override
+        protected List<IndexJob> executeCreate(FedoraClient fedoraClient, Client client, ESLogger log) throws Exception {
+            throw EXCEPTION;
+        }
+    }
 }
