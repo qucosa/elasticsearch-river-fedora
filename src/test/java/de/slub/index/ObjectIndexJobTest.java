@@ -18,8 +18,10 @@ package de.slub.index;
 
 import com.yourmediashelf.fedora.client.FedoraClient;
 import com.yourmediashelf.fedora.client.FedoraClientException;
-import com.yourmediashelf.fedora.client.request.GetObjectProfile;
+import com.yourmediashelf.fedora.client.request.FedoraRequest;
+import com.yourmediashelf.fedora.client.response.GetDatastreamResponse;
 import com.yourmediashelf.fedora.client.response.GetObjectProfileResponse;
+import com.yourmediashelf.fedora.generated.management.DatastreamProfile;
 import org.codehaus.jackson.map.util.ISO8601DateFormat;
 import org.elasticsearch.action.get.GetRequest;
 import org.elasticsearch.action.get.GetResponse;
@@ -39,7 +41,6 @@ import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 
-@Ignore("Only for manual debugging. Subsequent Datastream indexing cannot be mocked.")
 public class ObjectIndexJobTest {
 
     private static final ISO8601DateFormat dateFormatParser = new ISO8601DateFormat();
@@ -91,6 +92,7 @@ public class ObjectIndexJobTest {
     }
 
     @Test
+    @Ignore("Fedora datastream response not completely mocked")
     public void deleteIndexJobRemovesDocumentFromIndex() throws Exception {
         ObjectIndexJob job1 = new ObjectIndexJob(CREATE, "test:1234");
         job1.index("idx1").execute(fedoraClient, esNode.client(), esLogger);
@@ -103,6 +105,7 @@ public class ObjectIndexJobTest {
     }
 
     @Test
+    @Ignore("Fedora datastream response not completely mocked")
     public void deletesDatastreamDocumentsFromIndex() throws Exception {
         ObjectIndexJob job1 = new ObjectIndexJob(CREATE, "test:1234");
         job1.index("idx1").execute(fedoraClient, esNode.client(), esLogger);
@@ -136,15 +139,25 @@ public class ObjectIndexJobTest {
     @Before
     public void mockFedoraClient() throws FedoraClientException, ParseException {
         fedoraClient = mock(FedoraClient.class);
-        GetObjectProfileResponse mockObjectProfile = mock(GetObjectProfileResponse.class);
-        when(mockObjectProfile.getPid()).thenReturn("test:1234");
-        when(mockObjectProfile.getState()).thenReturn("A");
-        when(mockObjectProfile.getCreateDate()).thenReturn(dateFormatParser.parse("2014-05-07T18:33:33.996Z"));
-        when(mockObjectProfile.getLastModifiedDate()).thenReturn(dateFormatParser.parse("2014-05-07T18:35:29.636Z"));
-        when(mockObjectProfile.getLabel()).thenReturn("The label");
-        when(mockObjectProfile.getOwnerId()).thenReturn("SLUB");
-        when(fedoraClient.execute(any(GetObjectProfile.class)))
-                .thenReturn(mockObjectProfile);
+
+        GetObjectProfileResponse mockGetObjectProfileResponse = mock(GetObjectProfileResponse.class);
+        when(mockGetObjectProfileResponse.getPid()).thenReturn("test:1234");
+        when(mockGetObjectProfileResponse.getState()).thenReturn("A");
+        when(mockGetObjectProfileResponse.getCreateDate()).thenReturn(dateFormatParser.parse("2014-05-07T18:33:33.996Z"));
+        when(mockGetObjectProfileResponse.getLastModifiedDate()).thenReturn(dateFormatParser.parse("2014-05-07T18:35:29.636Z"));
+        when(mockGetObjectProfileResponse.getLabel()).thenReturn("The label");
+        when(mockGetObjectProfileResponse.getOwnerId()).thenReturn("SLUB");
+
+        GetDatastreamResponse mockDatastreamResponse = mock(GetDatastreamResponse.class);
+        DatastreamProfile datastreamProfile = new DatastreamProfile();
+        datastreamProfile.setPid("test:1234");
+        datastreamProfile.setDsID("DS");
+        datastreamProfile.setDsVersionable("true");
+        when(mockDatastreamResponse.getDatastreamProfile()).thenReturn(datastreamProfile);
+
+        when(fedoraClient.execute(any(FedoraRequest.class)))
+                .thenReturn(mockGetObjectProfileResponse)
+                .thenReturn(mockDatastreamResponse);
     }
 
     @After
