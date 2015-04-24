@@ -24,9 +24,9 @@ import org.junit.Test;
 
 import javax.jms.TextMessage;
 import java.io.IOException;
+import java.util.List;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -50,7 +50,7 @@ public class MessageMapperTest {
         when(message.getStringProperty(eq("methodName"))).thenReturn("ingest");
         when(message.getText()).thenReturn(getContent("/jms/ingest.xml"));
 
-        IndexJob ij = MessageMapper.map(message).get(0);
+        IndexJob ij = findFirstByClass(MessageMapper.map(message), ObjectIndexJob.class);
 
         assertEquals(
                 new ObjectIndexJob(IndexJob.Type.CREATE, "test-rest:1"),
@@ -64,7 +64,7 @@ public class MessageMapperTest {
         when(message.getStringProperty(eq("methodName"))).thenReturn("addDatastream");
         when(message.getText()).thenReturn(getContent("/jms/addDatastream.xml"));
 
-        IndexJob ij = MessageMapper.map(message).get(0);
+        IndexJob ij = findFirstByClass(MessageMapper.map(message), DatastreamIndexJob.class);
 
         assertEquals(
                 new DatastreamIndexJob(IndexJob.Type.CREATE, "test-rest:1", "testAddDatastream"),
@@ -78,7 +78,7 @@ public class MessageMapperTest {
         when(message.getStringProperty(eq("methodName"))).thenReturn("modifyDatastreamByValue");
         when(message.getText()).thenReturn(getContent("/jms/modifyDatastreamByValue.xml"));
 
-        IndexJob ij = MessageMapper.map(message).get(0);
+        IndexJob ij = findFirstByClass(MessageMapper.map(message), DatastreamIndexJob.class);
 
         assertEquals(
                 new DatastreamIndexJob(IndexJob.Type.UPDATE, "test-rest:1", "testModifyDatastream"),
@@ -92,7 +92,7 @@ public class MessageMapperTest {
         when(message.getStringProperty(eq("methodName"))).thenReturn("modifyObject");
         when(message.getText()).thenReturn(getContent("/jms/modifyObject.xml"));
 
-        IndexJob ij = MessageMapper.map(message).get(0);
+        IndexJob ij = findFirstByClass(MessageMapper.map(message), ObjectIndexJob.class);
 
         assertEquals(
                 new ObjectIndexJob(IndexJob.Type.UPDATE, "test-rest:1"),
@@ -100,7 +100,7 @@ public class MessageMapperTest {
     }
 
     @Test
-    public void returnsIndexJobForpurgeDatastreamMessage() throws Exception {
+    public void returnsIndexJobForPurgeDatastreamMessage() throws Exception {
         TextMessage message = mock(TextMessage.class);
         when(message.getStringProperty(eq("pid"))).thenReturn("test-rest:1");
         when(message.getStringProperty(eq("methodName"))).thenReturn("purgeDatastream");
@@ -120,11 +120,32 @@ public class MessageMapperTest {
         when(message.getStringProperty(eq("methodName"))).thenReturn("purgeObject");
         when(message.getText()).thenReturn(getContent("/jms/purgeObject.xml"));
 
-        IndexJob ij = MessageMapper.map(message).get(0);
+        IndexJob ij = findFirstByClass(MessageMapper.map(message), ObjectIndexJob.class);
 
         assertEquals(
                 new ObjectIndexJob(IndexJob.Type.DELETE, "test-rest:1"),
                 ij);
+    }
+
+    @Test
+    public void returnsObjectIndexJobForUpdateDatastreamMessage() throws Exception {
+        TextMessage message = mock(TextMessage.class);
+        when(message.getStringProperty(eq("pid"))).thenReturn("test-rest:1");
+        when(message.getStringProperty(eq("methodName"))).thenReturn("modifyDatastreamByValue");
+        when(message.getText()).thenReturn(getContent("/jms/modifyDatastreamByValue.xml"));
+
+        IndexJob ij = findFirstByClass(MessageMapper.map(message), ObjectIndexJob.class);
+
+        assertEquals(
+                new ObjectIndexJob(IndexJob.Type.UPDATE, "test-rest:1", "testModifyDatastream"),
+                ij);
+    }
+
+    private IndexJob findFirstByClass(List<IndexJob> jobs, Class c) {
+        for (IndexJob job : jobs) {
+            if (c.isInstance(job)) return job;
+        }
+        return null;
     }
 
     private String getContent(String filename) throws IOException {
