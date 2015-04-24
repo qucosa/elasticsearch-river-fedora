@@ -49,28 +49,29 @@ import java.util.*;
 public class FedoraRiver extends AbstractRiverComponent implements River {
 
     private static final String DEFAULT_INDEX_NAME = "fedora";
-    private String indexName = DEFAULT_INDEX_NAME;
-    private final UniquePredicateDelayQueue<IndexJob> indexJobQueue;
     private final Client esClient;
+    private final UniquePredicateDelayQueue<IndexJob> indexJobQueue;
     private APIMConsumer apimConsumer;
-    private IndexJobProcessor indexJobProcessor;
-    private FedoraClient fedoraClient;
     private Thread apimConsumerThread;
-    private Thread indexJobProcessorThread;
     private String brokerUrl;
-    private String messageSelector;
-    private String topicFilter;
-    private String fedoraUrl;
-    private String username;
-    private String password;
-    private String pidMatch = "";
-    private List<String> excludeDatastreams;
-    private String sdefPid;
-    private String method;
     private Map<String, Object> disseminationContentMapping;
-    private Map<String, Object> oaiSettings;
+    private List<String> excludeDatastreams = new ArrayList<>();
+    private FedoraClient fedoraClient;
+    private String fedoraUrl;
+    private IndexJobProcessor indexJobProcessor;
+    private Thread indexJobProcessorThread;
+    private String indexName = DEFAULT_INDEX_NAME;
+    private String messageSelector;
+    private String method;
     private OaiHarvester oaiHarvester;
     private Thread oaiHarvesterThread;
+    private Map<String, Object> oaiSettings;
+    private String password;
+    private String pidMatch = "";
+    private List<String> relevantDatastreams = new ArrayList<>();
+    private String sdefPid;
+    private String topicFilter;
+    private String username;
 
     @Inject
     protected FedoraRiver(RiverName riverName, RiverSettings settings, Client client) throws Exception {
@@ -83,6 +84,10 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
 
         if (!pidMatch.isEmpty()) {
             indexJobQueue.addPredicate(new MatchPidPredicate(pidMatch));
+        }
+
+        if (!relevantDatastreams.isEmpty()) {
+            indexJobQueue.addPredicate(new DisseminationRelevantDatastreamPredicate(relevantDatastreams));
         }
 
         if (!excludeDatastreams.isEmpty()) {
@@ -158,21 +163,15 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
             pidMatch = XContentMapValues.nodeStringValue(
                     indexSettings.get("pid_match"), "");
 
-            excludeDatastreams = new ArrayList<>();
-            if (indexSettings.containsKey("exclude_datastreams")) {
-                Object excludeDatastreamParam = indexSettings.get("exclude_datastreams");
-                if (excludeDatastreamParam instanceof Collection) {
-                    excludeDatastreams.addAll((Collection<? extends String>) excludeDatastreamParam);
-                } else {
-                    excludeDatastreams.add(String.valueOf(excludeDatastreamParam));
-                }
-            }
+            addToList(excludeDatastreams, "exclude_datastreams", indexSettings);
 
             if (indexSettings.containsKey("dissemination")) {
                 Map<String, Object> disseminationSettings =
                         XContentMapValues.nodeMapValue(indexSettings.get("dissemination"), "dissemination");
                 sdefPid = XContentMapValues.nodeStringValue(disseminationSettings.get("sdef_pid"), "");
                 method = XContentMapValues.nodeStringValue(disseminationSettings.get("method"), "");
+
+                addToList(relevantDatastreams, "relevant_datastreams", indexSettings);
 
                 if (disseminationSettings.containsKey("properties")) {
                     final Map<String, Object> mappingProperties =
@@ -245,6 +244,17 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
         if (settings.settings().containsKey("oai")) {
             this.oaiSettings =
                     XContentMapValues.nodeMapValue(settings.settings().get("oai"), "oai");
+        }
+    }
+
+    private void addToList(List<String> list, String key, Map<String, Object> indexSettings) {
+        if (indexSettings.containsKey(key)) {
+            Object excludeDatastreamParam = indexSettings.get(key);
+            if (excludeDatastreamParam instanceof Collection) {
+                list.addAll((Collection) excludeDatastreamParam);
+            } else {
+                list.add(String.valueOf(excludeDatastreamParam));
+            }
         }
     }
 
