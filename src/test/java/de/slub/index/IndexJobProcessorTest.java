@@ -17,20 +17,20 @@
 package de.slub.index;
 
 import com.yourmediashelf.fedora.client.FedoraClient;
+import de.slub.rules.InMemoryElasticsearchNode;
 import de.slub.util.TerminateableRunnable;
 import de.slub.util.concurrent.UniquePredicateDelayQueue;
-import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
 import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.ESLoggerFactory;
-import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.node.Node;
-import org.elasticsearch.node.NodeBuilder;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.ClassRule;
+import org.junit.Test;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -40,33 +40,14 @@ import static org.mockito.Mockito.reset;
 
 public class IndexJobProcessorTest {
 
-    private static Node esNode;
+    @ClassRule
+    public static InMemoryElasticsearchNode esNodeRule = new InMemoryElasticsearchNode();
+    private Client esClient;
+    private ESLogger esLogger;
+    private Node esNode = esNodeRule.getEsNode();
+    private FedoraClient fedoraClient;
     private IndexJobProcessor indexJobProcessor;
     private UniquePredicateDelayQueue<IndexJob> jobQueue;
-    private Client esClient;
-    private FedoraClient fedoraClient;
-    private ESLogger esLogger;
-
-    @BeforeClass
-    public static void setupEsNode() throws InterruptedException, IOException {
-        esNode = NodeBuilder.nodeBuilder().settings(ImmutableSettings.settingsBuilder()
-                .put("gateway.type", "none")
-                .put("index.store.type", "memory")
-                .put("index.store.fs.memory.enabled", true)
-                .put("path.data", "target/es/data")
-                .put("path.logs", "target/es/logs")
-                .put("index.number_of_shards", "1")
-                .put("index.number_of_replicas", "0"))
-                .local(true).node();
-        esNode.client().admin().indices().create(new CreateIndexRequest("testindex")).actionGet();
-        esNode.client().admin().cluster().prepareHealth().setWaitForYellowStatus().execute().actionGet();
-    }
-
-    @AfterClass
-    public static void teardownEsNode() {
-        esNode.client().close();
-        esNode.stop();
-    }
 
     @Test
     public void writesIndexErrorDocument() throws Exception {

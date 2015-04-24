@@ -21,6 +21,7 @@ import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import de.slub.index.IndexJob;
 import de.slub.index.ObjectIndexJob;
+import de.slub.rules.InMemoryElasticsearchNode;
 import de.slub.util.TerminateableRunnable;
 import de.slub.util.concurrent.UniquePredicateDelayQueue;
 import org.apache.commons.io.IOUtils;
@@ -30,11 +31,9 @@ import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
 import org.elasticsearch.action.get.GetRequest;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.common.logging.ESLoggerFactory;
-import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.indices.IndexMissingException;
 import org.elasticsearch.node.Node;
-import org.elasticsearch.node.NodeBuilder;
 import org.elasticsearch.river.RiverName;
 import org.junit.*;
 
@@ -50,35 +49,17 @@ import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 import static org.junit.Assert.*;
 
 public class OaiHarvesterTestIT {
+    @ClassRule
+    public static InMemoryElasticsearchNode esNodeRule = new InMemoryElasticsearchNode();
 
     private static final String OAI_LIST_RECORDS_XML = "/oai/listIdentifiers.xml";
     private static final String OAI_RESUMPTION_TOKEN_XML = "/oai/resumptionToken.xml";
     private static final String OAI_EMPTY_RESUMPTION_TOKEN_XML = "/oai/emptyResumptionToken.xml";
-    private static Node node;
+    private Node esNode = esNodeRule.getEsNode();
     private HttpServer httpServer;
     private EmbeddedHttpHandler embeddedHttpHandler;
     private OaiHarvester oaiHarvester;
     private Queue<IndexJob> jobQueue;
-
-    @BeforeClass
-    public static void setupEsNode() throws InterruptedException, IOException {
-        node = NodeBuilder.nodeBuilder().settings(ImmutableSettings.settingsBuilder()
-                .put("gateway.type", "none")
-                .put("index.store.type", "memory")
-                .put("index.store.fs.memory.enabled", true)
-                .put("path.data", "target/es/data")
-                .put("path.logs", "target/es/logs")
-                .put("index.number_of_shards", "1")
-                .put("index.number_of_replicas", "0"))
-                .local(true).node();
-        node.client().admin().cluster().prepareHealth().setWaitForYellowStatus().execute();
-    }
-
-    @AfterClass
-    public static void teardownEsNode() {
-        node.client().close();
-        node.stop();
-    }
 
     @Test
     public void createdObjectIndexJobForListedRecord() throws Exception {
@@ -94,7 +75,7 @@ public class OaiHarvesterTestIT {
         embeddedHttpHandler.resourcePath = OAI_LIST_RECORDS_XML;
         runAndWait(oaiHarvester);
 
-        GetResponse response = node.client().get(
+        GetResponse response = esNode.client().get(
                 new GetRequest("_river", "fedora", "_last")).actionGet();
         assertTrue("Last run index document is not present", response.isExists());
         assertTrue("Last run index document doesn't contain timestamp field",
@@ -104,7 +85,7 @@ public class OaiHarvesterTestIT {
     @Test
     public void usesFromQueryWhenLastrunTimestampPresent() throws Exception {
         embeddedHttpHandler.resourcePath = OAI_LIST_RECORDS_XML;
-        node.client().prepareIndex("_river", "fedora", "_last")
+        esNode.client().prepareIndex("_river", "fedora", "_last")
                 .setSource(jsonBuilder()
                         .startObject()
                         .field("timestamp", Calendar.getInstance().getTime())
@@ -122,7 +103,7 @@ public class OaiHarvesterTestIT {
         Calendar cal = Calendar.getInstance();
         cal.add(Calendar.YEAR, 1);
 
-        node.client().prepareIndex("_river", "fedora", "_last")
+        esNode.client().prepareIndex("_river", "fedora", "_last")
                 .setSource(jsonBuilder()
                         .startObject()
                         .field("timestamp", cal.getTime())
@@ -141,7 +122,7 @@ public class OaiHarvesterTestIT {
         embeddedHttpHandler.resourcePath = OAI_RESUMPTION_TOKEN_XML;
         runAndWait(oaiHarvester);
 
-        GetResponse response = node.client().get(
+        GetResponse response = esNode.client().get(
                 new GetRequest("_river", "fedora", "_last")).actionGet();
         assertTrue("Last run index document is not present", response.isExists());
         assertTrue("Last run index document doesn't contain resumption_token field",
@@ -154,7 +135,7 @@ public class OaiHarvesterTestIT {
 
     @Test
     public void usesResumptionToken() throws Exception {
-        node.client().prepareIndex("_river", "fedora", "_last")
+        esNode.client().prepareIndex("_river", "fedora", "_last")
                 .setSource(jsonBuilder()
                         .startObject()
                         .field("resumption_token", "xyz1234")
@@ -175,7 +156,7 @@ public class OaiHarvesterTestIT {
         Calendar cal = Calendar.getInstance();
         cal.add(Calendar.YEAR, -1);
 
-        node.client().prepareIndex("_river", "fedora", "_last")
+        esNode.client().prepareIndex("_river", "fedora", "_last")
                 .setSource(jsonBuilder()
                         .startObject()
                         .field("resumption_token", "xyz1234")
@@ -192,7 +173,7 @@ public class OaiHarvesterTestIT {
 
     @Test
     public void emptiesResumptionTokenInIndexDocument() throws Exception {
-        node.client().prepareIndex("_river", "fedora", "_last")
+        esNode.client().prepareIndex("_river", "fedora", "_last")
                 .setSource(jsonBuilder()
                         .startObject()
                         .field("resumption_token", "xyz1234")
@@ -202,7 +183,7 @@ public class OaiHarvesterTestIT {
         embeddedHttpHandler.resourcePath = OAI_EMPTY_RESUMPTION_TOKEN_XML;
         runAndWait(oaiHarvester);
 
-        GetResponse response = node.client().get(
+        GetResponse response = esNode.client().get(
                 new GetRequest("_river", "fedora", "_last")).actionGet();
         assertFalse("Last run index document contains resumption_token field",
                 response.getSourceAsMap().containsKey("resumption_token"));
@@ -213,7 +194,7 @@ public class OaiHarvesterTestIT {
         jobQueue = new UniquePredicateDelayQueue<>();
         oaiHarvester = new OaiHarvesterBuilder()
                 .url(new URL("http://localhost:8000/fedora/oai"))
-                .esClient(node.client())
+                .esClient(esNode.client())
                 .interval(new TimeValue(1, TimeUnit.SECONDS))
                 .riverName(new RiverName("fedora", "_river"))
                 .indexJobQueue(jobQueue)
@@ -244,15 +225,15 @@ public class OaiHarvesterTestIT {
 
     @Before
     public void setupRiverLastrun() throws IOException, InterruptedException {
-        node.client().admin().indices().create(new CreateIndexRequest("_river"));
-        node.client().admin().indices().refresh(new RefreshRequest());
+        esNode.client().admin().indices().create(new CreateIndexRequest("_river"));
+        esNode.client().admin().indices().refresh(new RefreshRequest());
         Thread.sleep(TimeUnit.SECONDS.toMillis(5));
     }
 
     @After
     public void teardownRiver() {
         try {
-            node.client().admin().indices().delete(new DeleteIndexRequest("_river")).actionGet();
+            esNode.client().admin().indices().delete(new DeleteIndexRequest("_river")).actionGet();
         } catch (IndexMissingException e) {
             // Index does not exist... Fine
         }

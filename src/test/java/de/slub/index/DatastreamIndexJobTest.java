@@ -24,18 +24,14 @@ import com.yourmediashelf.fedora.client.request.GetDatastreamDissemination;
 import com.yourmediashelf.fedora.client.response.FedoraResponse;
 import com.yourmediashelf.fedora.client.response.FedoraResponseImpl;
 import com.yourmediashelf.fedora.client.response.GetDatastreamResponse;
-import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
+import de.slub.rules.InMemoryElasticsearchNode;
 import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.logging.ESLogger;
-import org.elasticsearch.common.logging.ESLoggerFactory;
-import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.node.Node;
-import org.elasticsearch.node.NodeBuilder;
 import org.junit.*;
 
-import java.io.IOException;
 import java.io.InputStream;
 
 import static org.junit.Assert.assertTrue;
@@ -44,37 +40,15 @@ import static org.mockito.Mockito.*;
 
 public class DatastreamIndexJobTest {
 
-    private static Node esNode;
+    @ClassRule
+    public static InMemoryElasticsearchNode esNodeRule = new InMemoryElasticsearchNode();
     private static FedoraClient fedoraClient;
-    private static Client esClient;
-    private static ESLogger esLogger;
+    private ESLogger esLogger;
+    private Node esNode = esNodeRule.getEsNode();
 
     @BeforeClass
     public static void setup() {
         fedoraClient = mock(FedoraClient.class);
-    }
-
-    @BeforeClass
-    public static void setupEsNode() throws InterruptedException, IOException {
-        esNode = NodeBuilder.nodeBuilder().settings(ImmutableSettings.settingsBuilder()
-                .put("gateway.type", "none")
-                .put("index.store.type", "memory")
-                .put("index.store.fs.memory.enabled", true)
-                .put("path.data", "target/es/data")
-                .put("path.logs", "target/es/logs")
-                .put("index.number_of_shards", "1")
-                .put("index.number_of_replicas", "0"))
-                .local(true).node();
-        esNode.client().admin().indices().create(new CreateIndexRequest("testindex")).actionGet();
-        esNode.client().admin().cluster().prepareHealth().setWaitForYellowStatus().execute().actionGet();
-        esClient = esNode.client();
-        esLogger = ESLoggerFactory.getLogger(DatastreamIndexJobTest.class.getSimpleName());
-    }
-
-    @AfterClass
-    public static void teardownEsNode() {
-        esClient.close();
-        esNode.stop();
     }
 
     @Test
@@ -109,6 +83,8 @@ public class DatastreamIndexJobTest {
                 "test:1",
                 "ds:1");
         dsIndexJob.index("testindex");
+
+        Client esClient = esNode.client();
         dsIndexJob.execute(fedoraClient, esClient, esLogger);
 
         esClient.admin().indices().refresh(new RefreshRequest("testindex"));

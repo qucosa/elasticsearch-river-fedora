@@ -16,6 +16,7 @@
 
 package de.slub.elasticsearch.river.fedora;
 
+import de.slub.rules.InMemoryElasticsearchNode;
 import org.apache.commons.io.IOUtils;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsRequest;
@@ -23,10 +24,8 @@ import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsRespon
 import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
 import org.elasticsearch.action.get.GetRequest;
 import org.elasticsearch.action.get.GetResponse;
-import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.indices.IndexMissingException;
 import org.elasticsearch.node.Node;
-import org.elasticsearch.node.NodeBuilder;
 import org.junit.*;
 
 import java.io.IOException;
@@ -38,39 +37,19 @@ import static org.junit.Assert.assertTrue;
 @Ignore("Integration test requires a running Fedora instance")
 public class FedoraRiverPluginIT {
 
-    public static final String FEDORA_HOST = "localhost";
-    public static final boolean WHATEVER = true;
-    private static Node node;
-
-    @BeforeClass
-    public static void setupEsNode() throws InterruptedException, IOException {
-        node = NodeBuilder.nodeBuilder().settings(ImmutableSettings.settingsBuilder()
-                .put("gateway.type", "none")
-                .put("index.store.type", "memory")
-                .put("index.store.fs.memory.enabled", true)
-                .put("path.data", "target/es/data")
-                .put("path.logs", "target/es/logs")
-                .put("index.number_of_shards", "1")
-                .put("index.number_of_replicas", "0"))
-                .local(true).node();
-        node.client().admin().cluster().prepareHealth().setWaitForYellowStatus().execute();
-    }
-
-    @AfterClass
-    public static void teardownEsNode() {
-        node.client().close();
-        node.stop();
-    }
+    @ClassRule
+    public static InMemoryElasticsearchNode esNodeRule = new InMemoryElasticsearchNode();
+    private Node esNode = esNodeRule.getEsNode();
 
     @Test
     public void riverStarts() throws InterruptedException {
-        GetResponse response = node.client().get(new GetRequest("_river", "fr1", "_status")).actionGet();
+        GetResponse response = esNode.client().get(new GetRequest("_river", "fr1", "_status")).actionGet();
         assertFalse(response.getSourceAsMap().containsKey("error"));
     }
 
     @Test
     public void riverInitializesObjectIndex() {
-        IndicesExistsResponse response = node.client().admin().indices().exists(
+        IndicesExistsResponse response = esNode.client().admin().indices().exists(
                 new IndicesExistsRequest("fedora")
         ).actionGet();
         assertTrue(response.isExists());
@@ -78,11 +57,11 @@ public class FedoraRiverPluginIT {
 
     @Before
     public void setupRiver() throws IOException, InterruptedException {
-        node.client().prepareIndex("_river", "fr1", "_meta")
+        esNode.client().prepareIndex("_river", "fr1", "_meta")
                 .setSource(
                         IOUtils.toString(this.getClass().getResourceAsStream("/config/fedora-river-config.json")))
                 .execute().actionGet();
-        node.client().admin().indices().refresh(
+        esNode.client().admin().indices().refresh(
                 new RefreshRequest()
         );
         Thread.sleep(TimeUnit.SECONDS.toMillis(5));
@@ -91,7 +70,7 @@ public class FedoraRiverPluginIT {
     @After
     public void teardownRiver() {
         try {
-            node.client().admin().indices().delete(new DeleteIndexRequest("_river")).actionGet();
+            esNode.client().admin().indices().delete(new DeleteIndexRequest("_river")).actionGet();
         } catch (IndexMissingException e) {
             // Index does not exist... Fine
         }

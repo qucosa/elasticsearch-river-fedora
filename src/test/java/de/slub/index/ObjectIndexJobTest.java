@@ -22,17 +22,15 @@ import com.yourmediashelf.fedora.client.request.FedoraRequest;
 import com.yourmediashelf.fedora.client.response.GetDatastreamResponse;
 import com.yourmediashelf.fedora.client.response.GetObjectProfileResponse;
 import com.yourmediashelf.fedora.generated.management.DatastreamProfile;
+import de.slub.rules.InMemoryElasticsearchNode;
 import org.codehaus.jackson.map.util.ISO8601DateFormat;
 import org.elasticsearch.action.get.GetRequest;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.ESLoggerFactory;
-import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.node.Node;
-import org.elasticsearch.node.NodeBuilder;
 import org.junit.*;
 
-import java.io.IOException;
 import java.text.ParseException;
 
 import static de.slub.index.IndexJob.Type.*;
@@ -45,28 +43,12 @@ public class ObjectIndexJobTest {
 
     private static final ISO8601DateFormat dateFormatParser = new ISO8601DateFormat();
     private static final ESLogger esLogger = ESLoggerFactory.getLogger("test-logger");
-    private static Node esNode;
+
+    @ClassRule
+    public static InMemoryElasticsearchNode esNodeRule = new InMemoryElasticsearchNode();
+    private Node esNode = esNodeRule.getEsNode();
+
     private FedoraClient fedoraClient;
-
-    @BeforeClass
-    public static void setupEsNode() throws InterruptedException, IOException {
-        esNode = NodeBuilder.nodeBuilder().settings(ImmutableSettings.settingsBuilder()
-                .put("gateway.type", "none")
-                .put("index.store.type", "memory")
-                .put("index.store.fs.memory.enabled", true)
-                .put("path.data", "target/es/data")
-                .put("path.logs", "target/es/logs")
-                .put("index.number_of_shards", "1")
-                .put("index.number_of_replicas", "0"))
-                .local(true).node();
-        esNode.client().admin().cluster().prepareHealth().setWaitForYellowStatus().execute().actionGet();
-    }
-
-    @AfterClass
-    public static void teardownEsNode() {
-        esNode.client().close();
-        esNode.stop();
-    }
 
     @Test
     public void executesCreateIndexDocument() throws Exception {
