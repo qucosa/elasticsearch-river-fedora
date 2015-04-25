@@ -26,7 +26,6 @@ import de.slub.fedora.oai.OaiHarvester;
 import de.slub.fedora.oai.OaiHarvesterBuilder;
 import de.slub.index.*;
 import de.slub.util.concurrent.UniquePredicateDelayQueue;
-import org.apache.activemq.ConfigurationException;
 import org.apache.commons.io.IOUtils;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsRequest;
@@ -152,7 +151,7 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
         }
     }
 
-    private void configure(RiverSettings settings) throws ConfigurationException {
+    private void configure(RiverSettings settings) throws Exception {
         if (settings.settings().containsKey("index")) {
             Map<String, Object> indexSettings =
                     XContentMapValues.nodeMapValue(settings.settings().get("index"), "index");
@@ -225,7 +224,7 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
         }
 
         if (brokerUrl == null || brokerUrl.isEmpty()) {
-            throw new ConfigurationException("No broker URL has been configured. " +
+            throw new Exception("No broker URL has been configured. " +
                     "Please specify jms.brokerUrl in the Fedora River metadata."
             );
         }
@@ -237,7 +236,7 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
             username = (String) fedoraSettings.get("username");
             password = (String) fedoraSettings.get("password");
         } else {
-            throw new ConfigurationException("No Fedora repository has been configured. " +
+            throw new Exception("No Fedora repository has been configured. " +
                     "Please specify fedora.* options in the Fedora River metadata.");
         }
 
