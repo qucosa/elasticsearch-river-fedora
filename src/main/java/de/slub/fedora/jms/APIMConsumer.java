@@ -91,7 +91,7 @@ public class APIMConsumer extends TerminateableRunnable {
     }
 
     private void startup() throws JMSException {
-        log.debug("Set up ActiveMQ connection to {}...", uri.toASCIIString());
+        log.info("Set up ActiveMQ connection to {}...", uri.toASCIIString());
 
         ActiveMQConnectionFactory connectionFactory =
                 new ActiveMQConnectionFactory(uri);

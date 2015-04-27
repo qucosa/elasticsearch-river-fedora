@@ -49,7 +49,6 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
 
     private static final String DEFAULT_INDEX_NAME = "fedora";
     private final Client esClient;
-    private final UniquePredicateDelayQueue<IndexJob> indexJobQueue;
     private APIMConsumer apimConsumer;
     private Thread apimConsumerThread;
     private String brokerUrl;
@@ -59,6 +58,7 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
     private String fedoraUrl;
     private IndexJobProcessor indexJobProcessor;
     private Thread indexJobProcessorThread;
+    private UniquePredicateDelayQueue<IndexJob> indexJobQueue;
     private String indexName = DEFAULT_INDEX_NAME;
     private String messageSelector;
     private String method;
@@ -77,50 +77,60 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
         super(riverName, settings);
         esClient = client;
 
+        logger.info("Starting river configuration");
+
         configure(settings);
-
-        indexJobQueue = new UniquePredicateDelayQueue<>();
-
-        if (!pidMatch.isEmpty()) {
-            indexJobQueue.addPredicate(new MatchPidPredicate(pidMatch));
-        }
-
-        if (!relevantDatastreams.isEmpty()) {
-            indexJobQueue.addPredicate(new DisseminationRelevantDatastreamPredicate(relevantDatastreams));
-        }
-
-        if (!excludeDatastreams.isEmpty()) {
-            indexJobQueue.addPredicate(new ExcludeDatastreamPredicate(excludeDatastreams));
-        }
-
+        setupJobQueueing();
         setupApimConsumerThread(settings);
         setupOaiHarvesterThread();
         setupFedoraClient();
         setupIndexJobProcessorThread(settings);
 
-        logger.info("created");
+        logger.info("River created and configured");
+    }
+
+    private void setupJobQueueing() {
+        indexJobQueue = new UniquePredicateDelayQueue<>();
+        if (!pidMatch.isEmpty()) {
+            indexJobQueue.addPredicate(new MatchPidPredicate(pidMatch));
+        }
+        if (!relevantDatastreams.isEmpty()) {
+            indexJobQueue.addPredicate(new DisseminationRelevantDatastreamPredicate(relevantDatastreams));
+        }
+        if (!excludeDatastreams.isEmpty()) {
+            indexJobQueue.addPredicate(new ExcludeDatastreamPredicate(excludeDatastreams));
+        }
     }
 
     private void setupOaiHarvesterThread() throws Exception {
-        oaiHarvester = new OaiHarvesterBuilder()
-                .settings(oaiSettings)
-                .esClient(esClient)
-                .riverName(riverName)
-                .indexJobQueue(indexJobQueue)
-                .logger(logger)
-                .build();
-        oaiHarvesterThread = EsExecutors.daemonThreadFactory(
-                settings.globalSettings(),
-                "fedora-river-oaiHarvester").newThread(oaiHarvester);
+        if (!oaiSettings.isEmpty()) {
+            oaiHarvester = new OaiHarvesterBuilder()
+                    .settings(oaiSettings)
+                    .esClient(esClient)
+                    .riverName(riverName)
+                    .indexJobQueue(indexJobQueue)
+                    .logger(logger)
+                    .build();
+            oaiHarvesterThread = EsExecutors.daemonThreadFactory(
+                    settings.globalSettings(),
+                    "fedora-river-oaiHarvester").newThread(oaiHarvester);
+        }
     }
 
     @Override
     public void start() {
         setupIndex(esClient, indexName);
-        apimConsumerThread.start();
-        oaiHarvesterThread.start();
-        indexJobProcessorThread.start();
-        logger.info("started");
+        safeStart(apimConsumerThread);
+        safeStart(oaiHarvesterThread);
+        safeStart(indexJobProcessorThread);
+        logger.info("River started");
+    }
+
+    private void safeStart(Thread thread) {
+        if (thread != null && thread.getState().equals(Thread.State.NEW)) {
+            thread.start();
+            logger.info("Started thread: [{}] {}", thread.getId(), thread.getName());
+        }
     }
 
     @Override
@@ -128,7 +138,7 @@ public class FedoraRiver extends AbstractRiverComponent implements River {
         apimConsumer.terminate();
         oaiHarvester.terminate();
         indexJobProcessor.terminate();
-        logger.info("closed");
+        logger.info("River closed");
     }
 
     private void setupFedoraClient() throws Exception {
