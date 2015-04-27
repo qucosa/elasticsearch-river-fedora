@@ -22,7 +22,7 @@
 
     <groupId>de.slub</groupId>
     <artifactId>fedora-river</artifactId>
-    <version>1.0.1-SNAPSHOT</version>
+    <version>1.1.0</version>
     <packaging>jar</packaging>
 
     <name>fedora-river</name>
