@@ -58,15 +58,13 @@ import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 
 public class OaiHarvester extends TerminateableRunnable {
 
-    private final ESLogger logger;
-    private final URL url;
-    private final TimeValue interval;
+    public static final OaiRunResult EMPTY_OAI_RUN_RESULT = new OaiRunResult();
     private final Client client;
-    private final RiverName riverName;
+    private final TimeValue interval;
     private final Queue<IndexJob> jobQueue;
-    private Date lastrun;
-    private String resumptionToken;
-    private Date expirationDate;
+    private final ESLogger logger;
+    private final RiverName riverName;
+    private final URL url;
 
     protected OaiHarvester(
             URL harvestingUrl,
@@ -100,60 +98,63 @@ public class OaiHarvester extends TerminateableRunnable {
 
     private void harvestLoop() throws URISyntaxException, InterruptedException {
         while (isRunning()) {
-            Date timestamp = now();
-            getLastrunParameters();
-
-            if (lastrun != null && timestamp.before(lastrun)) {
-                TimeUnit.MILLISECONDS.sleep(interval.getMillis());
-                continue;
-            }
-
-            URI uri = buildOaiRequestURI();
-            HttpGet httpGet = new HttpGet(uri);
-            CloseableHttpClient httpClient = HttpClients.createMinimal();
-
-            try (CloseableHttpResponse httpResponse = httpClient.execute(httpGet)) {
-                if (httpResponse.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
-                    HttpEntity httpEntity = httpResponse.getEntity();
-                    if (httpEntity != null) {
-                        handleXmlResult(httpEntity.getContent());
-                        writeLastrun(timestamp);
-                    } else {
-                        logger.warn("Got empty response from OAI service.");
-                    }
-                } else {
-                    logger.error("Unexpected OAI service response: {} {}",
-                            httpResponse.getStatusLine().getStatusCode(),
-                            httpResponse.getStatusLine().getReasonPhrase());
-                }
-            } catch (Exception ex) {
-                logger.error(ex.getMessage());
-            } finally {
-                if (resumptionTokenIsPresent()) {
-                    TimeUnit.SECONDS.sleep(1);
-                } else {
-                    TimeUnit.MILLISECONDS.sleep(interval.getMillis());
-                }
-            }
+            OaiRunResult lastrun = getLastrunParameters();
+            waitForNextRun(lastrun);
+            harvest(lastrun);
         }
     }
 
-    private boolean resumptionTokenIsPresent() {
-        return resumptionToken != null && !resumptionToken.isEmpty();
+    private void waitForNextRun(OaiRunResult lastrun) throws InterruptedException {
+        Date start = now();
+        TimeValue waitTime = interval;
+        if (lastrun.isInFuture(start)) {
+            long delta = lastrun.getTimestamp().getTime() - start.getTime();
+            waitTime = TimeValue.timeValueMillis(delta);
+        } else if (lastrun.hasResumptionToken()) {
+            waitTime = TimeValue.timeValueSeconds(1);
+        }
+        TimeUnit.MILLISECONDS.sleep(waitTime.getMillis());
+    }
+
+    private void harvest(OaiRunResult lastRun) throws URISyntaxException, InterruptedException {
+        Date timeOfRun = now();
+        URI uri = buildOaiRequestURI(timeOfRun, lastRun);
+        HttpGet httpGet = new HttpGet(uri);
+        CloseableHttpClient httpClient = HttpClients.createMinimal();
+
+        try (CloseableHttpResponse httpResponse = httpClient.execute(httpGet)) {
+            if (httpResponse.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
+                HttpEntity httpEntity = httpResponse.getEntity();
+                if (httpEntity != null) {
+                    OaiRunResult runResult = handleXmlResult(httpEntity.getContent());
+                    writeLastrun(timeOfRun, runResult);
+                } else {
+                    logger.warn("Got empty response from OAI service.");
+                }
+            } else {
+                logger.error("Unexpected OAI service response: {} {}",
+                        httpResponse.getStatusLine().getStatusCode(),
+                        httpResponse.getStatusLine().getReasonPhrase());
+            }
+        } catch (Exception ex) {
+            logger.error(ex.getMessage());
+        }
     }
 
     private Date now() {
         return Calendar.getInstance().getTime();
     }
 
-    private void getLastrunParameters() {
+    private OaiRunResult getLastrunParameters() {
         GetResponse response = client.prepareGet(riverName.name(), riverName.type(), "_last").execute().actionGet();
         if (response.isExists()) {
             Map<String, Object> src = response.getSourceAsMap();
-            lastrun = getDate(src, "timestamp");
-            expirationDate = getDate(src, "expiration_date");
-            resumptionToken = (String) src.get("resumption_token");
+            return new OaiRunResult(
+                    getDate(src, "timestamp"),
+                    getDate(src, "expiration_date"),
+                    (String) src.get("resumption_token"));
         }
+        return EMPTY_OAI_RUN_RESULT;
     }
 
     private Date getDate(Map<String, Object> src, String param) {
@@ -166,36 +167,30 @@ public class OaiHarvester extends TerminateableRunnable {
         return null;
     }
 
-    private URI buildOaiRequestURI() throws URISyntaxException {
+    private URI buildOaiRequestURI(Date now, OaiRunResult lastrun) throws URISyntaxException {
         UriBuilder builder = UriBuilder.fromUri(url.toURI())
                 .queryParam("verb", "ListIdentifiers");
 
-        if (isValidResumptionToken(resumptionToken, expirationDate)) {
-            builder.queryParam("resumptionToken", resumptionToken);
+        if (lastrun.isValidResumptionToken(now)) {
+            builder.queryParam("resumptionToken", lastrun.getResumptionToken());
         } else {
             builder.queryParam("metadataPrefix", "oai_dc");
-            if (lastrun != null) {
-                builder.queryParam("from", new SimpleDateFormat("YYYY-MM-DD").format(lastrun));
+            if (lastrun.hasTimestamp()) {
+                builder.queryParam("from", new SimpleDateFormat("YYYY-MM-DD").format(lastrun.getTimestamp()));
             }
         }
 
         return builder.build();
     }
 
-    private boolean isValidResumptionToken(String token, Date expires) {
-        return token != null
-                && !token.isEmpty()
-                && (expires == null || expires.after(now()));
-    }
-
-    private void writeLastrun(final Date timestamp) throws IOException {
+    private void writeLastrun(final Date timestamp, OaiRunResult runResult) throws IOException {
         XContentBuilder jb = jsonBuilder().startObject();
         jb.field("timestamp", timestamp);
-        if (resumptionTokenIsPresent()) {
-            jb.field("resumption_token", resumptionToken);
+        if (runResult.hasResumptionToken()) {
+            jb.field("resumption_token", runResult.getResumptionToken());
         }
-        if (expirationDate != null) {
-            jb.field("expiration_date", expirationDate);
+        if (runResult.getExpirationDate() != null) {
+            jb.field("expiration_date", runResult.getExpirationDate());
         }
         jb.endObject();
         client.prepareIndex(riverName.getName(), riverName.type(), "_last")
@@ -203,7 +198,7 @@ public class OaiHarvester extends TerminateableRunnable {
                 .execute().actionGet();
     }
 
-    private void handleXmlResult(
+    private OaiRunResult handleXmlResult(
             InputStream content)
             throws
             ParserConfigurationException,
@@ -226,15 +221,18 @@ public class OaiHarvester extends TerminateableRunnable {
         }
 
         XPathExpression xSelectResumptionToken = xPath.compile("//resumptionToken");
-        resumptionToken = (String) xSelectResumptionToken.evaluate(document, XPathConstants.STRING);
+        String resumptionToken = (String) xSelectResumptionToken.evaluate(document, XPathConstants.STRING);
 
         XPathExpression xSelectExpirationDate = xPath.compile("//resumptionToken/@expirationDate");
         String s = (String) xSelectExpirationDate.evaluate(document, XPathConstants.STRING);
+        Date expirationDate;
         if (s == null || s.isEmpty()) {
             expirationDate = null;
         } else {
             expirationDate = DatatypeConverter.parseDateTime(s).getTime();
         }
+
+        return new OaiRunResult(null, expirationDate, resumptionToken);
     }
 
     private String getLocalIdentifier(String oaiId) {

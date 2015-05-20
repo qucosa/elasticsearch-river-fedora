@@ -35,8 +35,12 @@ import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.indices.IndexMissingException;
 import org.elasticsearch.node.Node;
 import org.elasticsearch.river.RiverName;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.ClassRule;
+import org.junit.Test;
 
+import javax.xml.bind.DatatypeConverter;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -49,17 +53,16 @@ import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 import static org.junit.Assert.*;
 
 public class OaiHarvesterTestIT {
-    @ClassRule
-    public static InMemoryElasticsearchNode esNodeRule = new InMemoryElasticsearchNode();
-
     private static final String OAI_LIST_RECORDS_XML = "/oai/listIdentifiers.xml";
     private static final String OAI_RESUMPTION_TOKEN_XML = "/oai/resumptionToken.xml";
     private static final String OAI_EMPTY_RESUMPTION_TOKEN_XML = "/oai/emptyResumptionToken.xml";
+    @ClassRule
+    public static InMemoryElasticsearchNode esNodeRule = new InMemoryElasticsearchNode();
+    private EmbeddedHttpHandler embeddedHttpHandler;
     private Node esNode = esNodeRule.getEsNode();
     private HttpServer httpServer;
-    private EmbeddedHttpHandler embeddedHttpHandler;
-    private OaiHarvester oaiHarvester;
     private Queue<IndexJob> jobQueue;
+    private OaiHarvester oaiHarvester;
 
     @Test
     public void createdObjectIndexJobForListedRecord() throws Exception {
@@ -99,22 +102,61 @@ public class OaiHarvesterTestIT {
     }
 
     @Test
-    public void doesNothingWhenLastrunIsInFuture() throws Exception {
+    public void runWhenLastrunIsInPast() throws Exception {
         Calendar cal = Calendar.getInstance();
-        cal.add(Calendar.YEAR, 1);
+        cal.add(Calendar.YEAR, -1);
 
         esNode.client().prepareIndex("_river", "fedora", "_last")
                 .setSource(jsonBuilder()
                         .startObject()
-                        .field("timestamp", cal.getTime())
+                        .field("timestamp", cal)
                         .endObject())
                 .execute().actionGet();
 
         embeddedHttpHandler.resourcePath = OAI_LIST_RECORDS_XML;
         runAndWait(oaiHarvester);
 
-        assertNull("Last run is in future. Should not harvest.",
-                embeddedHttpHandler.lastRequestUri);
+        GetResponse response = esNode.client().get(
+                new GetRequest("_river", "fedora", "_last")).actionGet();
+
+        TimeValue lastRunTime = TimeValue.timeValueMillis(cal.getTimeInMillis());
+        TimeValue actualRunTime = TimeValue.timeValueMillis(
+                DatatypeConverter.parseDateTime(
+                        String.valueOf(response.getSourceAsMap().get("timestamp")))
+                        .getTimeInMillis()
+        );
+
+        assertTrue("Actual run should happen after last run",
+                actualRunTime.getMillis() > lastRunTime.getMillis());
+    }
+
+    @Test
+    public void waitWhenLastrunIsInFuture() throws Exception {
+        Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.SECOND, 3);
+
+        esNode.client().prepareIndex("_river", "fedora", "_last")
+                .setSource(jsonBuilder()
+                        .startObject()
+                        .field("timestamp", cal)
+                        .endObject())
+                .execute().actionGet();
+
+        embeddedHttpHandler.resourcePath = OAI_LIST_RECORDS_XML;
+        runAndWait(oaiHarvester);
+
+        GetResponse response = esNode.client().get(
+                new GetRequest("_river", "fedora", "_last")).actionGet();
+
+        TimeValue expectedRunTime = TimeValue.timeValueMillis(cal.getTimeInMillis());
+        TimeValue actualRunTime = TimeValue.timeValueMillis(
+                DatatypeConverter.parseDateTime(
+                        String.valueOf(response.getSourceAsMap().get("timestamp")))
+                        .getTimeInMillis()
+        );
+
+        assertFalse("Actual run should not happen before last run",
+                expectedRunTime.getMillis() > actualRunTime.getMillis());
     }
 
     @Test
