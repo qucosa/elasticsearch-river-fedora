@@ -43,6 +43,7 @@ import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 public class ObjectIndexJob extends IndexJob {
 
     public static final String ES_TYPE_NAME = "object";
+    public static final ArrayList<IndexJob> EMPTY_LIST = new ArrayList<>();
 
     public ObjectIndexJob(Type type, String pid) {
         super(type, pid);
@@ -79,13 +80,14 @@ public class ObjectIndexJob extends IndexJob {
                 .setTypes(ES_TYPE_NAME, DatastreamIndexJob.ES_TYPE_NAME, IndexJobProcessor.ES_ERROR_TYPE_NAME)
                 .setQuery(termQuery("PID", pid()))
                 .execute().actionGet();
-        return null;
+        return EMPTY_LIST;
     }
 
     @Override
     protected List<IndexJob> executeUpdate(FedoraClient fedoraClient, Client client, ESLogger log) throws Exception {
         executeCreate(fedoraClient, client, log);
-        return null;
+        // Update should not return any subsequent Jobs, that's why we return an empty list here
+        return EMPTY_LIST;
     }
 
     @Override

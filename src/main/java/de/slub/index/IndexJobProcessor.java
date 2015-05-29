@@ -80,7 +80,7 @@ public class IndexJobProcessor extends TerminateableRunnable {
                     .method(method)
                     .execute(fedoraClient, client, log);
 
-            if (newJobs != null) for (IndexJob indexJob : newJobs) queue.add(indexJob);
+            for (IndexJob indexJob : newJobs) queue.add(indexJob);
 
         } catch (Exception ex) {
             log.error("Error: " + ex.getMessage());

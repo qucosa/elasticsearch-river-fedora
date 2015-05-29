@@ -32,6 +32,7 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import java.io.InputStream;
 import java.io.Reader;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
@@ -40,6 +41,7 @@ import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 public class DatastreamIndexJob extends IndexJob {
 
     public static final String ES_TYPE_NAME = "datastream";
+    public static final ArrayList<IndexJob> EMPTY_LIST = new ArrayList<>();
 
     public DatastreamIndexJob(Type create, String pid, String dsid, int delay, TimeUnit unit) {
         super(create, pid, dsid, delay, unit);
@@ -57,13 +59,13 @@ public class DatastreamIndexJob extends IndexJob {
     @Override
     protected java.util.List<IndexJob> executeDelete(FedoraClient fedoraClient, Client client, ESLogger log) {
         deleteErrorDocuments(client);
-        return null;
+        return EMPTY_LIST;
     }
 
     @Override
     protected java.util.List<IndexJob> executeUpdate(FedoraClient fedoraClient, Client client, ESLogger log) throws Exception {
         executeCreate(fedoraClient, client, log);
-        return null;
+        return EMPTY_LIST;
     }
 
     @Override
@@ -75,7 +77,7 @@ public class DatastreamIndexJob extends IndexJob {
         if (response.isCreated()) {
             deleteErrorDocuments(client);
         }
-        return null;
+        return EMPTY_LIST;
     }
 
     private XContentBuilder buildIndexObject(FedoraClient fedoraClient) throws Exception {
