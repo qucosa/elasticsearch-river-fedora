@@ -22,6 +22,8 @@ import org.apache.activemq.ActiveMQConnectionFactory;
 import org.elasticsearch.common.logging.ESLogger;
 
 import javax.jms.*;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.net.URI;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -53,7 +55,7 @@ public class APIMConsumer extends TerminateableRunnable {
             startup();
             receiveLoop();
         } catch (Exception e) {
-            log.error(e.getMessage());
+            log.error(ensureMessage(e));
         } finally {
             shutdown();
         }
@@ -132,5 +134,16 @@ public class APIMConsumer extends TerminateableRunnable {
             log.error("Error closing ActiveMQ connection: " + e.getMessage());
         }
         log.info("Disconnected from JMS broker: " + uri.toASCIIString());
+    }
+
+    private String ensureMessage(Exception ex) {
+        String message = ex.getMessage();
+        if (message == null || message.isEmpty()) {
+            StringWriter sw = new StringWriter();
+            PrintWriter pw = new PrintWriter(sw);
+            ex.printStackTrace(pw);
+            message = sw.toString();
+        }
+        return message;
     }
 }

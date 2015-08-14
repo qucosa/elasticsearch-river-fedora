@@ -43,6 +43,8 @@ import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.*;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -89,7 +91,7 @@ public class OaiHarvester extends TerminateableRunnable {
         try {
             harvestLoop();
         } catch (Exception e) {
-            logger.error(e.getMessage());
+            logger.error(ensureMessage(e));
         }
     }
 
@@ -152,9 +154,20 @@ public class OaiHarvester extends TerminateableRunnable {
                         httpResponse.getStatusLine().getReasonPhrase());
             }
         } catch (Exception ex) {
-            logger.error(ex.getMessage());
+            logger.error(ensureMessage(ex));
         }
         return result;
+    }
+
+    private String ensureMessage(Exception ex) {
+        String message = ex.getMessage();
+        if (message == null || message.isEmpty()) {
+            StringWriter sw = new StringWriter();
+            PrintWriter pw = new PrintWriter(sw);
+            ex.printStackTrace(pw);
+            message = sw.toString();
+        }
+        return message;
     }
 
     private Date now() {
