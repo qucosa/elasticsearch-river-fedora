@@ -131,6 +131,27 @@ public class OaiHarvesterTestIT {
     }
 
     @Test
+    public void runWhenLastrunIsCorrupted() throws Exception {
+        esNode.client().prepareIndex("_river", "fedora", "_last")
+                .setSource(jsonBuilder()
+                        .startObject()
+                        .field("timestamp", "")
+                        .field("expiration_date", "BAR")
+                        .field("resumption_token", "BAZ")
+                        .endObject())
+                .execute().actionGet();
+
+        embeddedHttpHandler.resourcePath = OAI_LIST_RECORDS_XML;
+        runAndWait(oaiHarvester);
+
+        GetResponse response = esNode.client().get(
+                new GetRequest("_river", "fedora", "_last")).actionGet();
+
+        assertNotNull("There should be a /_river/fedora/_last document", response);
+        assertTrue("Timestamp should be set", response.getSourceAsMap().containsKey("timestamp"));
+    }
+
+    @Test
     public void waitWhenLastrunIsInFuture() throws Exception {
         Calendar cal = Calendar.getInstance();
         cal.add(Calendar.SECOND, 3);

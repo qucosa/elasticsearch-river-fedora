@@ -59,8 +59,8 @@ import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 
 public class OaiHarvester extends TerminateableRunnable {
 
-    public static final OaiRunResult EMPTY_OAI_RUN_RESULT = new OaiRunResult();
-    public static final SimpleDateFormat FCREPO3_TIMESTAMP_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ss");
+    private static final OaiRunResult EMPTY_OAI_RUN_RESULT = new OaiRunResult();
+    private static final SimpleDateFormat FCREPO3_TIMESTAMP_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ss");
     private final Client client;
     private final TimeValue interval;
     private final Queue<IndexJob> jobQueue;
@@ -96,13 +96,12 @@ public class OaiHarvester extends TerminateableRunnable {
     }
 
     private void harvestLoop() {
-        OaiRunResult lastrun = getLastrunParameters();
         while (isRunning()) {
-            if (waitForNextRun(lastrun)) {
+            if (waitForNextRun(getLastrunParameters())) {
                 // update last run info in case it has been changed while waiting
-                lastrun = getLastrunParameters();
-                lastrun = harvest(lastrun);
-                writeLastrun(lastrun);
+                final OaiRunResult lastrun = getLastrunParameters();
+                final OaiRunResult newlastrun = harvest(lastrun);
+                writeLastrun(newlastrun);
             }
         }
     }
@@ -175,21 +174,26 @@ public class OaiHarvester extends TerminateableRunnable {
     }
 
     private OaiRunResult getLastrunParameters() {
-        GetResponse response = client.prepareGet(riverName.name(), riverName.type(), "_last").execute().actionGet();
-        if (response.isExists()) {
-            Map<String, Object> src = response.getSourceAsMap();
-            return new OaiRunResult(
-                    getDate(src, "timestamp"),
-                    getDate(src, "expiration_date"),
-                    (String) src.get("resumption_token"));
+        OaiRunResult result = EMPTY_OAI_RUN_RESULT;
+        try {
+            GetResponse response = client.prepareGet(riverName.name(), riverName.type(), "_last").execute().actionGet();
+            if (response.isExists()) {
+                Map<String, Object> src = response.getSourceAsMap();
+                result = new OaiRunResult(
+                        getDate(src, "timestamp"),
+                        getDate(src, "expiration_date"),
+                        (String) src.get("resumption_token"));
+            }
+        } catch (Exception _) {
+            logger.warn("Error parsing the '_last' river run document. Assuming there was no run...");
         }
-        return EMPTY_OAI_RUN_RESULT;
+        return result;
     }
 
     private Date getDate(Map<String, Object> src, String param) {
         if (src.containsKey(param)) {
             String s = (String) src.get(param);
-            if (!s.isEmpty()) {
+            if (s != null && !s.isEmpty()) {
                 return DatatypeConverter.parseDateTime(s).getTime();
             }
         }
